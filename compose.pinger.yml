@@ -22,5 +22,6 @@ services:
             #   RELAY_SENDER_INFORMAL_NAME   default: Pinger
             #   TO_EMAIL_ADDR                required
             #   SAVE_HISTORY                 default: 0 (val is: 1 or 0), saved in & mount vol to: /var/log/pinger/
+            #   STATUS_EMAIL_DAYS            default: 30, if HISTORY enabled it will be summarized, emailed & file truncated 
         volumes:
             - "C:\\temp\\pinger\\:/var/log/pinger/:z" 

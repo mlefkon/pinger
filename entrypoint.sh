@@ -69,6 +69,21 @@ echo "Normal Startup..."
     service postfix start
     service crond start
 
+echo "Sending init/test email..."
+    cat <<EOF | /usr/sbin/sendmail -t
+To: $TO_EMAIL_ADDR
+Subject: INIT - $ENDPOINT_DESCRIPTION
+From: $RELAY_SENDER_INFORMAL_NAME <$RELAY_SENDER_EMAIL_ADDRESS>
+
+Ping has been successfully initialized.
+URI: $PING_URI
+With an expected response of: $EXPECTED_RESPONSE
+Ping test will be run every $INTERVAL_MIN minutes.
+$THRESHOLD_FAILS_FOR_EMAIL failures will be required to send an email.
+$([ "$SAVE_HISTORY" == 0 ] && echo "No history will be saved" || echo "History will be saved in /var/log/pinger/.  A docker volume can be mounted for persistance.")
+
+EOF
+
 echo "Run initial ping..."
 /usr/local/pinger.sh > /dev/null 2>&1
 

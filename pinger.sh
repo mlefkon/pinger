@@ -1,27 +1,7 @@
 #!/bin/bash
 
-let numerr=0
-
-if [ -f /var/local/ping_err ]; 
-    then 
-        let numerr=$(cat /var/local/ping_err); 
-    else
-        cat <<EOF | /usr/sbin/sendmail -t
-To: $TO_EMAIL_ADDR
-Subject: INIT - $ENDPOINT_DESCRIPTION
-From: $RELAY_SENDER_INFORMAL_NAME <$RELAY_SENDER_EMAIL_ADDRESS>
-
-Ping has been successfully initialized.
-URI: $PING_URI
-With an expected response of: $EXPECTED_RESPONSE
-Ping test will be run every $INTERVAL_MIN minutes.
-$THRESHOLD_FAILS_FOR_EMAIL failures will be required to send an email.
-$([ "$SAVE_HISTORY" == 0 ] && echo "No history will be saved" || echo "History will be saved in /var/log/pinger/.  A docker volume can be mounted for persistance.")
-
-EOF
-
-fi; 
-let lasterr=numerr;
+numerr=$([ -f /var/local/pinger_err ] && cat /var/local/pinger_err || echo 0);
+lastnumerr=numerr;
 if [[ $(curl --url $PING_URI) == $EXPECTED_RESPONSE ]] ; then let numerr=0; else let numerr=$((numerr + 1)); fi;
 if [ $numerr -ge $THRESHOLD_FAILS_FOR_EMAIL ]; 
     then 
@@ -38,7 +18,7 @@ $([ "$numerr" == "$THRESHOLD_FAILS_FOR_EMAIL" ] && echo "(Send email threshold: 
 
 EOF
     fi
-if [[ $numerr -eq 0 && $lasterr -ge $THRESHOLD_FAILS_FOR_EMAIL ]]; 
+if [[ $numerr -eq 0 && $lastnumerr -ge $THRESHOLD_FAILS_FOR_EMAIL ]]; 
     then
         echo "Sending OK email. Condition ok. Prior errors: $numerr" >> /proc/1/fd/1
 cat <<EOF | /usr/sbin/sendmail -t
@@ -47,11 +27,41 @@ Subject: OK - $ENDPOINT_DESCRIPTION
 From: $RELAY_SENDER_INFORMAL_NAME <$RELAY_SENDER_EMAIL_ADDRESS>
 
 Ping is now OK on: $PING_URI
-  (previous # errors: $lasterr)
+  (previous # errors: $lastnumerr)
 
 EOF
     fi;
 
-echo "$(date +%s),$(( $numerr==0 ? 1 : 0 ))" >> "/var/log/pinger/${ENDPOINT_DESCRIPTION// /_}.log"
+if [ $SAVE_HISTORY == 1 ]; then
+    ts=$(date +%s)
+    logfile="/var/log/pinger/${ENDPOINT_DESCRIPTION// /_}.log"
+    laststatus=$([ -f $logfile ] && head -n1 $logfile | sed 's/,.*//' || echo 0)
+    echo "${ts},$(( $numerr==0 ? 1 : 0 ))" >> "$logfile"
+    if [[ $laststatus != 0 && $laststatus < $(($ts-${STATUS_EMAIL_DAYS:=30}*86400)) ]];  # 86400=one day in seconds
+        then 
+            numfails=$(grep ",0" $logfile | wc -l)
+            failsecs=$(($numfails*$INTERVAL_MIN*60))
+            totalsecs=$(($ts-$laststatus))
+            percentup=`echo "scale=4; 100-100*$failsecs/$totalsecs" | bc -l`
+            startdate=$(date -d @$laststatus +%D)
+            enddate=$(date -d @$ts +%D)
+            echo "Sending status email: Uptime ${percentup}% from $startdate to $enddate" >> /proc/1/fd/1
+            cat <<EOF | /usr/sbin/sendmail -t
+To: $TO_EMAIL_ADDR
+Subject: STATUS REPORT - $ENDPOINT_DESCRIPTION
+From: $RELAY_SENDER_INFORMAL_NAME <$RELAY_SENDER_EMAIL_ADDRESS>
 
-echo $numerr > /var/local/ping_err
+Pinger Status Report
+
+Uptime ${percentup}% from $startdate to $enddate
+
+Failed Pings: $numfails (interval: ${INTERVAL_MIN})
+
+EOF
+
+        mv -f "$logfile" "${logfile}.old"
+    fi;
+fi;
+
+echo $numerr > /var/local/pinger_err
+

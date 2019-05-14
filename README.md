@@ -25,7 +25,8 @@ This was designed to work with Zoho mail's SMTP relay.  It may work with many ot
   - **ENDPOINT_DESCRIPTION:**         default: "Pinger", will appear as 'subject' in emails
   - **TO_EMAIL_ADDR:**                required
 - History 
-  - **SAVE_HISTORY**                 default: 0 (val: 1 or 0)
+  - **SAVE_HISTORY**                  default: 0 (val: 1 or 0)
+  - **STATUS_EMAIL_DAYS**             default: 7, Status report email will be send every X days
 
 ## Save Data
 If enabled, history is saved as a CSV file in to: /var/log/pinger/. A docker volume can be mounted here to persist. There are two fields with the format:
@@ -47,6 +48,7 @@ If enabled, history is saved as a CSV file in to: /var/log/pinger/. A docker vol
     -e RELAY_SENDER_INFORMAL_NAME="Pinger Alert" \
     -e TO_EMAIL_ADDR=destination@email.com \
     -e SAVE_HISTORY=1 \
+    -e STATUS_EMAIL_DAYS=7 \
     mlefkon/pinger 
 ```
 or
