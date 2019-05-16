@@ -86,7 +86,7 @@ Avg Ping Time: ${avgpingtime}s
 
 Recent History
 Start - End Date, Pct Up, Avg Ping Time
-${statusReportHistory//,/, }
+${statusReportHistory}
 
 EOF
 
