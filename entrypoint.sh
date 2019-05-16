@@ -18,16 +18,12 @@ echo "Checking required Environment Variables..."
 echo "Configuring Postfix..."  
     # /etc/postfix/main.cf
     postconf -e "relayhost = ${RELAY_HOST}"
-    postconf -e "mydomain = local.domain"
-    postconf -e "myhostname = host.local.domain"
-    postconf -e "myorigin = \$myhostname"
+    postconf -e "inet_protocols = ipv4"
     postconf -e "smtp_use_tls = yes"
     postconf -e "smtp_sasl_auth_enable = yes"
     postconf -e "smtp_sasl_security_options = noanonymous"
     postconf -e "smtp_sasl_type = cyrus"
     postconf -e "smtp_tls_CAfile = /etc/ssl/certs/ca-bundle.crt"
-    postconf -e "inet_protocols = ipv4"
-    postconf -e "inet_interfaces = localhost"
 
     # sender_canonical
     postconf -e "sender_canonical_maps = regexp:/etc/postfix/sender_canonical" 
@@ -94,5 +90,9 @@ Emailed every ${STATUS_EMAIL_DAYS} days.
 History is saved in /var/log/pinger/.  Mount a docker volume for persistance.
 
 EOF
+
+sleep 30
+echo "  If email not received, examine Postfix mail logs: /var/log/maillog"
+cat /var/log/maillog | egrep "to=.* relay=.* status=" | grep -v root
 
 sleep infinity
