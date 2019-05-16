@@ -1,7 +1,7 @@
 #!/bin/bash
 
 buildDate=$(cat /usr/local/pinger.build)
-echo "Pinger Build Date: $buildDate"
+echo "Image Build Date: $buildDate"
 echo "Endpoint: ${ENDPOINT_DESCRIPTION:=Pinger}"
 
 echo "Checking required Environment Variables..."
@@ -15,35 +15,33 @@ echo "Checking required Environment Variables..."
     if [ "${TO_EMAIL_ADDR:-missing}"              == "missing" ]; then fatal=1; echo "Env var TO_EMAIL_ADDR is required.";              fi;
     if [ $fatal -eq 1 ]; then echo "FATAL ERROR: missing environment variables need to be defined."; exit; fi;
 
-echo "Configuring Postfix..."
-    # Comment out all existing entries
-    ENTRIES="relayhost|sender_canonical_maps|smtp_header_checks|mydomain|myhostname|myorigin|smtp_use_tls|smtp_sasl_auth_enable|smtp_sasl_security_options|smtp_sasl_password_maps|smtp_sasl_type|smtp_tls_CAfile|inet_protocols|inet_interfaces"
-    sed -ri "s/^\s*(($ENTRIES)\s*=.*)/# &/" /etc/postfix/main.cf;
-
-    echo "relayhost = ${RELAY_HOST}                      " >> /etc/postfix/main.cf; 
-    echo "mydomain   = local.domain                      " >> /etc/postfix/main.cf; 
-    echo "myhostname = host.local.domain                 " >> /etc/postfix/main.cf; 
-    echo "myorigin = \$myhostname                        " >> /etc/postfix/main.cf; 
-    echo "smtp_use_tls = yes                             " >> /etc/postfix/main.cf; 
-    echo "smtp_sasl_auth_enable = yes                    " >> /etc/postfix/main.cf; 
-    echo "smtp_sasl_security_options = noanonymous       " >> /etc/postfix/main.cf; 
-    echo "smtp_sasl_type = cyrus                         " >> /etc/postfix/main.cf; 
-    echo "smtp_tls_CAfile = /etc/ssl/certs/ca-bundle.crt " >> /etc/postfix/main.cf; 
-    echo "inet_protocols = ipv4                          " >> /etc/postfix/main.cf; 
-    echo "inet_interfaces = localhost                    " >> /etc/postfix/main.cf; 
+echo "Configuring Postfix..."  
+    # /etc/postfix/main.cf
+    postconf -e "relayhost = ${RELAY_HOST}"
+    postconf -e "mydomain = local.domain"
+    postconf -e "myhostname = host.local.domain"
+    postconf -e "myorigin = \$myhostname"
+    postconf -e "smtp_use_tls = yes"
+    postconf -e "smtp_sasl_auth_enable = yes"
+    postconf -e "smtp_sasl_security_options = noanonymous"
+    postconf -e "smtp_sasl_type = cyrus"
+    postconf -e "smtp_tls_CAfile = /etc/ssl/certs/ca-bundle.crt"
+    postconf -e "inet_protocols = ipv4"
+    postconf -e "inet_interfaces = localhost"
 
     # sender_canonical
-    echo "sender_canonical_maps = regexp:/etc/postfix/sender_canonical" >> /etc/postfix/main.cf; 
-    echo "/.+/ ${RELAY_SENDER_EMAIL_ADDRESS}"                                          > /etc/postfix/sender_canonical; 
+    postconf -e "sender_canonical_maps = regexp:/etc/postfix/sender_canonical" 
+    echo "/.+/ ${RELAY_SENDER_EMAIL_ADDRESS}" > /etc/postfix/sender_canonical; 
     # smtp_header_checks
-    echo "smtp_header_checks = regexp:/etc/postfix/smtp_header_checks" >> /etc/postfix/main.cf; 
-    echo "/From:.*/ REPLACE From: ${RELAY_SENDER_INFORMAL_NAME} <${RELAY_SENDER_EMAIL_ADDRESS}>"             > /etc/postfix/smtp_header_checks; 
+    postconf -e "smtp_header_checks = regexp:/etc/postfix/smtp_header_checks"
+    echo "/From:.*/ REPLACE From: ${RELAY_SENDER_INFORMAL_NAME} <${RELAY_SENDER_EMAIL_ADDRESS}>" > /etc/postfix/smtp_header_checks; 
     # sasl_passwd
-    echo "smtp_sasl_password_maps = hash:/etc/postfix/sasl_passwd" >> /etc/postfix/main.cf; 
-    echo "${RELAY_HOST} ${RELAY_USERNAME}:${RELAY_PASSWORD}" > /etc/postfix/sasl_passwd; 
-    postmap /etc/postfix/sasl_passwd;                              
-    chown root:root                                                  /etc/postfix/sasl_passwd /etc/postfix/sasl_passwd.db; 
-    chmod 0600                                                       /etc/postfix/sasl_passwd /etc/postfix/sasl_passwd.db; 
+    postconf -e "smtp_sasl_password_maps = hash:/etc/postfix/sasl_passwd" 
+    echo "${RELAY_HOST} ${RELAY_USERNAME}:${RELAY_PASSWORD}" \
+                  > /etc/postfix/sasl_passwd; 
+    postmap         /etc/postfix/sasl_passwd;                              
+    chown root:root /etc/postfix/sasl_passwd /etc/postfix/sasl_passwd.db; 
+    chmod 0600      /etc/postfix/sasl_passwd /etc/postfix/sasl_passwd.db; 
 
 echo "Initializing logs..."
 pingLogFile="/var/log/pinger/${ENDPOINT_DESCRIPTION// /_}.ping.log"

@@ -26,17 +26,18 @@ This was designed to work with Zoho mail's SMTP relay.  It may work with many ot
   - **TO_EMAIL_ADDR:**                required
 - Status Report 
   - **STATUS_EMAIL_DAYS**             default: 30, Status report email will be send every X days
-
+	
 ## Status Report
-The status email will contain:
-- Time period
-- Percent up time 
+At the end of each `${STATUS_EMAIL_DAYS}` time period and email will be sent with:
+- Start/End Dates
+- Total down time
+- Percent up  
 - Average ping time
 
 ## Historical Data
 
-Data is saved to `$ENDPOINT_DESCRIPTION.log` files in `/var/log/pinger/`. A docker volume can be mounted here to persist. There are two CSV files with the formats:
-- Ping History
+Data is saved to `${ENDPOINT_DESCRIPTION}.log` files in `/var/log/pinger/`. A docker volume can be mounted here to persist. There are two CSV files with the formats:
+- Ping History (only current period. Prior period is moved to ~.prior.log)
 	- Unix Timestamp
 	- State (1- endpoint is up, 0- endpoint is down)
 	- Ping time
@@ -45,8 +46,6 @@ Data is saved to `$ENDPOINT_DESCRIPTION.log` files in `/var/log/pinger/`. A dock
 	- To Date
 	- Up Time Percentage
 	- Average Ping Time
-
-Ping History only has current period's data.  The prior period is saved in ~log.old.
 
 ## Run
 ```

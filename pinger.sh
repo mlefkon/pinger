@@ -45,7 +45,7 @@ pingPriorLogFile="/var/log/pinger/${ENDPOINT_DESCRIPTION// /_}.ping.prior.log"
 firstStatusTS=$([ -f $pingLogFile ] && head -n1 $pingLogFile | sed 's/,.*//' || echo 0)
 echo "${ts},$(( $numerr==0 ? 1 : 0 )),$pingtime" >> "$pingLogFile"
 # STATUS REPORT EMAIL
-if [[ $firstStatusTS != 0 && $firstStatusTS < $(($ts-${STATUS_EMAIL_DAYS:=30}*86400)) ]];  # 86400=one day in seconds
+if [[ $firstStatusTS != 0 && $firstStatusTS < $(($ts-${STATUS_EMAIL_DAYS:=30}*86400)) ]];  # 86400=one day in seconds 
     then 
         #Time Period
         startdate=$(date -d @$firstStatusTS +%D)
