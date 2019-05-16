@@ -9,17 +9,5 @@ services:
         restart: always
         env_file:
             - ./pinger.env
-            # Define environment in above file, each on separate line as: VAR=val
-            #   ENDPOINT_DESCRIPTION         default: "Pinger", will appear as 'subject' in emails
-            #   INTERVAL_MIN                 default: 5
-            #   THRESHOLD_FAILS_FOR_EMAIL    default: 1
-            #   PING_URI                     required
-            #   EXPECTED_RESPONSE            required, expected text body returned from PING_URI
-            #   RELAY_HOST                   required, format (incl sq brackets): [relay.host.tld]:port
-            #   RELAY_USERNAME               required, user's loggin to relay mail host
-            #   RELAY_PASSWORD               required
-            #   RELAY_SENDER_EMAIL_ADDRESS   required, should be permitted to send mails by relay host, often same as username
-            #   RELAY_SENDER_INFORMAL_NAME   default: Pinger
-            #   TO_EMAIL_ADDR                required
-            #   SAVE_HISTORY                 default: 0 (val is: 1 or 0), saved in & mount vol to: /var/log/pinger/
-            #   STATUS_EMAIL_DAYS            default: 30, if HISTORY enabled it will be summarized, emailed & file truncated 
+        volumes:
+            - "C:\\temp\\pinger\\:/var/log/pinger/:z" 

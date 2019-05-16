@@ -8,6 +8,9 @@ COPY pinger.sh \
         /usr/local/
 
 RUN chmod 755   /usr/local/entrypoint.sh \
-                /usr/local/pinger.sh 
+                /usr/local/pinger.sh \
+ && date      > /usr/local/pinger.build \
+ && mkdir -p /var/log/pinger 
+
 
 ENTRYPOINT ["/usr/local/entrypoint.sh"]

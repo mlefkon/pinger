@@ -2,3 +2,4 @@ notes/
 rpm/
 # ignore the private environment variables file
 pinger.env
+compose.pinger.yml

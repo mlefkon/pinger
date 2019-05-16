@@ -24,14 +24,29 @@ This was designed to work with Zoho mail's SMTP relay.  It may work with many ot
 - Email
   - **ENDPOINT_DESCRIPTION:**         default: "Pinger", will appear as 'subject' in emails
   - **TO_EMAIL_ADDR:**                required
-- History 
-  - **SAVE_HISTORY**                  default: 0 (val: 1 or 0)
-  - **STATUS_EMAIL_DAYS**             default: 7, Status report email will be send every X days
+- Status Report 
+  - **STATUS_EMAIL_DAYS**             default: 30, Status report email will be send every X days
 
-## Save Data
-If enabled, history is saved as a CSV file in to: /var/log/pinger/. A docker volume can be mounted here to persist. There are two fields with the format:
-- Unix Timestamp
-- State (1- endpoint is up, 0- endpoint is down)
+## Status Report
+The status email will contain:
+- Time period
+- Percent up time 
+- Average ping time
+
+## Historical Data
+
+Data is saved to `$ENDPOINT_DESCRIPTION.log` files in `/var/log/pinger/`. A docker volume can be mounted here to persist. There are two CSV files with the formats:
+- Ping History
+	- Unix Timestamp
+	- State (1- endpoint is up, 0- endpoint is down)
+	- Ping time
+- Status History
+	- From Date
+	- To Date
+	- Up Time Percentage
+	- Average Ping Time
+
+Ping History only has current period's data.  The prior period is saved in ~log.old.
 
 ## Run
 ```
@@ -47,19 +62,12 @@ If enabled, history is saved as a CSV file in to: /var/log/pinger/. A docker vol
     -e RELAY_SENDER_EMAIL_ADDRESS=useremail@relay.com \
     -e RELAY_SENDER_INFORMAL_NAME="Pinger Alert" \
     -e TO_EMAIL_ADDR=destination@email.com \
-    -e SAVE_HISTORY=1 \
     -e STATUS_EMAIL_DAYS=7 \
     mlefkon/pinger 
 ```
 or
 
-> specify env vars in `./pinger.env` :
+> specify env vars in `./pinger.env` (one per line as: VAR=val, no quotes needed for strings with spaces):
 ```
     $ docker run --name mypinger --env-file pinger.env -d mlefkon/pinger 
-```
-or
-
-> use compose:
-```
-    $ docker-compose -f compose.pinger.yml up -d
 ```
