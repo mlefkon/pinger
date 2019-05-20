@@ -19,11 +19,11 @@ This was designed to work with Zoho mail's SMTP relay.  It may work with many ot
   - **RELAY_SENDER_EMAIL_ADDRESS:**   required, should be permitted to send mails by relay host, often same as username
   - **RELAY_SENDER_INFORMAL_NAME:**   default: Pinger
 - Timing
-  - **INTERVAL_MIN:**                 default: 5, Ping interval
-  - **THRESHOLD_FAILS_FOR_EMAIL:**    default: 1, Threshold # of failures for failure email
+  - **INTERVAL_MIN:**                 default: 5, minutes between pings
+  - **THRESHOLD_FAILS_FOR_EMAIL:**    default: 1, num of failures before an alert email is sent
 - Email
   - **ENDPOINT_DESCRIPTION:**         default: "Pinger", will appear as 'subject' in emails
-  - **TO_EMAIL_ADDR:**                required
+  - **TO_EMAIL_ADDR:**                required, recipient of alert emails
 - Status Report 
   - **STATUS_EMAIL_DAYS**             default: 30, Status report email will be send every X days
 	
