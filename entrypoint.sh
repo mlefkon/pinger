@@ -92,7 +92,7 @@ Ping every: $INTERVAL_MIN minuntes
 Threshold: $THRESHOLD_FAILS_FOR_EMAIL failures will be required to send an email.
 Status Report: Emailed every ${STATUS_EMAIL_DAYS} days.
 Existing History: $logfiletext
-- (mount /var/log/pinger/ as a docker volume to preserve history between reboots)
+- Note: mount /var/log/pinger/ as a docker volume to preserve history between reboots.
 
 EOF
 
