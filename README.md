@@ -64,9 +64,4 @@ Data is saved to `${ENDPOINT_DESCRIPTION}.log` files in `/var/log/pinger/`. A do
     -e STATUS_EMAIL_DAYS=7 \
     mlefkon/pinger 
 ```
-or
 
-> specify env vars in `./pinger.env` (one per line as: VAR=val, no quotes needed for strings with spaces):
-```
-    $ docker run --name mypinger --env-file pinger.env -d mlefkon/pinger 
-```
