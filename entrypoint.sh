@@ -39,10 +39,6 @@ echo "Configuring Postfix..."
     chown root:root /etc/postfix/sasl_passwd /etc/postfix/sasl_passwd.db; 
     chmod 0600      /etc/postfix/sasl_passwd /etc/postfix/sasl_passwd.db; 
 
-echo "Initializing logs..."
-pingLogFile="/var/log/pinger/${ENDPOINT_DESCRIPTION// /_}.ping.log"
-rm -f $pingLogFile
-
 echo "Configuring Crontab job..."
 set -f
 cronjob="
