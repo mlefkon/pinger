@@ -45,8 +45,10 @@ firstStatusTS=$([ -f $pingLogFile ] && head -n1 $pingLogFile | sed 's/,.*//' || 
 if [ $firstStatusTS -eq 0 ]; 
     then 
         logfiletext="Log file does not exist.  A new file will be initialized."
+		inittext="INIT"
     else 
         logfiletext="Log file already exists, starting on $(date -d @$firstStatusTS +%D), $(cat $pingLogFile | wc -l) pings so far."; 
+		inittext="RE-INIT (reboot)"
     fi;
 
 echo "Configuring Crontab job..."
@@ -79,7 +81,7 @@ echo "Normal Startup..."
 echo "Sending init/test email..."
     cat <<EOF | /usr/sbin/sendmail -t
 To: $TO_EMAIL_ADDR
-Subject: INIT - $ENDPOINT_DESCRIPTION
+Subject: ${inittext} - $ENDPOINT_DESCRIPTION
 From: $RELAY_SENDER_INFORMAL_NAME <$RELAY_SENDER_EMAIL_ADDRESS>
 
 Ping has been successfully initialized.
