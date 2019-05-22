@@ -39,6 +39,16 @@ echo "Configuring Postfix..."
     chown root:root /etc/postfix/sasl_passwd /etc/postfix/sasl_passwd.db; 
     chmod 0600      /etc/postfix/sasl_passwd /etc/postfix/sasl_passwd.db; 
 
+echo "Checking logs..."
+pingLogFile="/var/log/pinger/${ENDPOINT_DESCRIPTION// /_}.ping.log"
+firstStatusTS=$([ -f $pingLogFile ] && head -n1 $pingLogFile | sed 's/,.*//' || echo 0);
+if [ $firstStatusTS -eq 0 ]; 
+    then 
+        logfiletext="Log file does not exist.  A new file will be initialized."
+    else 
+        logfiletext="Log file already exists, starting on $(date -d @$firstStatusTS +%D), $(cat $pingLogFile | wc -l) pings so far."; 
+    fi;
+
 echo "Configuring Crontab job..."
 set -f
 cronjob="
@@ -80,10 +90,9 @@ URI: $PING_URI
 Expected Response: "$EXPECTED_RESPONSE"
 Ping every: $INTERVAL_MIN minuntes
 Threshold: $THRESHOLD_FAILS_FOR_EMAIL failures will be required to send an email.
-
-Status Report (% up, average ping time)
-Emailed every ${STATUS_EMAIL_DAYS} days.
-History is saved in /var/log/pinger/.  Mount a docker volume for persistance.
+Status Report: Emailed every ${STATUS_EMAIL_DAYS} days.
+Existing History: $logfiletext
+- (mount /var/log/pinger/ as a docker volume to preserve history between reboots)
 
 EOF
 
