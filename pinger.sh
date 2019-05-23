@@ -19,7 +19,7 @@ From: $RELAY_SENDER_INFORMAL_NAME <$RELAY_SENDER_EMAIL_ADDRESS>
 
 Ping has failed on: $PING_URI
 Failed Times: $numerr
-$([ "$numerr" == "$THRESHOLD_FAILS_FOR_EMAIL" ] && echo "(Send email threshold: $THRESHOLD_FAILS_FOR_EMAIL)" || echo "")
+$([ "$numerr" == "$THRESHOLD_FAILS_FOR_EMAIL" ] && echo "(Threshold to send email: $THRESHOLD_FAILS_FOR_EMAIL) fails" || echo "")
 
 
 EOF
