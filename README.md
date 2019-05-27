@@ -30,7 +30,7 @@ This was designed to work with Zoho mail's SMTP relay.  It may work with many ot
 ## Status Report
 At the end of each `${STATUS_EMAIL_DAYS}` time period and email will be sent with:
 - Start/End Dates
-- Total down time
+- Total down time (& times of failures)
 - Percent up  
 - Average ping time
 

@@ -90,9 +90,9 @@ $ENDPOINT_NAME
 
 URI: $PING_URI
 Expected Response: "$EXPECTED_RESPONSE"
-Ping every: $INTERVAL_MIN minuntes
-Threshold: $THRESHOLD_FAILS_FOR_EMAIL failures will be required to send an email.
-Status Report: Emailed every ${STATUS_EMAIL_DAYS} days.
+Ping every: $INTERVAL_MIN minunte(s)
+Threshold: $THRESHOLD_FAILS_FOR_EMAIL failure(s) will be required to send an email.
+Status Report: Emailed every ${STATUS_EMAIL_DAYS} day(s).
 History: $logfiletext
 - Note: mount /var/log/pinger/ as a docker volume to preserve history between reboots.
 
