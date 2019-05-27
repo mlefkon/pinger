@@ -2,7 +2,7 @@
 
 buildDate=$(cat /usr/local/pinger.build)
 echo "Image Build Date: $buildDate"
-echo "Endpoint: ${ENDPOINT_DESCRIPTION:=Pinger}"
+echo "Endpoint: ${ENDPOINT_NAME:=Pinger}"
 
 echo "Checking required Environment Variables..."
     fatal=0
@@ -40,7 +40,7 @@ echo "Configuring Postfix..."
     chmod 0600      /etc/postfix/sasl_passwd /etc/postfix/sasl_passwd.db; 
 
 echo "Checking logs..."
-pingLogFile="/var/log/pinger/${ENDPOINT_DESCRIPTION// /_}.ping.log"
+pingLogFile="/var/log/pinger/${ENDPOINT_NAME// /_}.ping.log"
 firstStatusTS=$([ -f $pingLogFile ] && head -n1 $pingLogFile | sed 's/,.*//' || echo 0);
 if [ $firstStatusTS -eq 0 ]; 
     then 
@@ -54,7 +54,7 @@ if [ $firstStatusTS -eq 0 ];
 echo "Configuring Crontab job..."
 set -f
 cronjob="
-\nENDPOINT_DESCRIPTION=\"${ENDPOINT_DESCRIPTION:=Pinger}\"
+\nENDPOINT_NAME=\"${ENDPOINT_NAME:=Pinger}\"
 \nINTERVAL_MIN=\"${INTERVAL_MIN:=5}\"
 \nTHRESHOLD_FAILS_FOR_EMAIL=\"${THRESHOLD_FAILS_FOR_EMAIL:=1}\"
 \nPING_URI=\"${PING_URI}\"
@@ -81,12 +81,12 @@ echo "Normal Startup..."
 echo "Sending init/test email..."
     cat <<EOF | /usr/sbin/sendmail -t
 To: $TO_EMAIL_ADDR
-Subject: ${inittext} - $ENDPOINT_DESCRIPTION
+Subject: ${inittext} - $ENDPOINT_NAME
 From: $RELAY_SENDER_INFORMAL_NAME <$RELAY_SENDER_EMAIL_ADDRESS>
 
 Ping has been successfully initialized.
 
-$ENDPOINT_DESCRIPTION
+$ENDPOINT_NAME
 
 URI: $PING_URI
 Expected Response: "$EXPECTED_RESPONSE"

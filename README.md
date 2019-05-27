@@ -22,7 +22,7 @@ This was designed to work with Zoho mail's SMTP relay.  It may work with many ot
   - **INTERVAL_MIN:**                 default: 5, minutes between pings
   - **THRESHOLD_FAILS_FOR_EMAIL:**    default: 1, num of failures before an alert email is sent
 - Email
-  - **ENDPOINT_DESCRIPTION:**         default: "Pinger", will appear as 'subject' in emails
+  - **ENDPOINT_NAME:**                default: "Pinger", will appear as 'subject' in emails
   - **TO_EMAIL_ADDR:**                required, recipient of alert emails
 - Status Report 
   - **STATUS_EMAIL_DAYS**             default: 30, Status report email will be send every X days
@@ -36,7 +36,7 @@ At the end of each `${STATUS_EMAIL_DAYS}` time period and email will be sent wit
 
 ## Historical Data
 
-Data is saved to `${ENDPOINT_DESCRIPTION}.log` files in `/var/log/pinger/`. A docker volume can be mounted here to persist. There are two CSV files with the formats:
+Data is saved to `${ENDPOINT_NAME}.log` files in `/var/log/pinger/`. A docker volume can be mounted here to persist. There are two CSV files with the formats:
 - Ping History (only current period. Prior period is moved to ~.prior.log)
 	- Unix Timestamp
 	- State (1- endpoint is up, 0- endpoint is down)
@@ -48,9 +48,9 @@ Data is saved to `${ENDPOINT_DESCRIPTION}.log` files in `/var/log/pinger/`. A do
 	- Average Ping Time
 
 ## Run
-```
+```bash
     $ docker run --name mypinger -d \
-    -e ENDPOINT_DESCRIPTION="My Pinger" \
+    -e ENDPOINT_NAME="My Pinger" \
     -e INTERVAL_MIN=3 \
     -e THRESHOLD_FAILS_FOR_EMAIL=2 \
     -e PING_URI=https://my.url.com/myscript \
