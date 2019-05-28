@@ -1,6 +1,7 @@
 #!/bin/bash
 
-numerr=$([ -f /var/local/pinger_err ] && cat /var/local/pinger_err || echo 0);
+pingErrFile="/var/log/pinger/${ENDPOINT_NAME// /_}.ping.err"
+numerr=$([ -f $pingErrFile ] && cat $pingErrFile || echo 0);
 lastnumerr=numerr;
 
 pingstart=$(date +%s%N)
@@ -45,7 +46,7 @@ pingLogFile="/var/log/pinger/${ENDPOINT_NAME// /_}.ping.log"
 pingPriorLogFile="/var/log/pinger/${ENDPOINT_NAME// /_}.ping.prior.log"
 firstStatusTS=$([ -f $pingLogFile ] && head -n1 $pingLogFile | sed 's/,.*//' || echo 0)
 # STATUS REPORT EMAIL
-if [[ $firstStatusTS -ne 0 && $firstStatusTS -le $(($ts-${STATUS_EMAIL_DAYS:=30}*86400)) ]];  # 86400=one day in seconds 
+if [[ $firstStatusTS -ne 0 && $firstStatusTS -le $(($ts-${STATUS_EMAIL_DAYS:=30}*60)) ]];  # 86400=one day in seconds 
     then 
         #Time Period
         startdate=$(date -d @$firstStatusTS +%D)
@@ -62,15 +63,15 @@ if [[ $firstStatusTS -ne 0 && $firstStatusTS -le $(($ts-${STATUS_EMAIL_DAYS:=30}
             percentup=`echo "scale=4; 100-100*$failsecs/$totalsecs" | bc -l`
         fi;
         #Average Ping Time
-        avgpingtime=$(cat $pingLogFile | awk --field-separator=, '{ total += $3; count++ } END { print total/count }')
+        avgpingtime=$(cat $pingLogFile | awk --field-separator=, 'BEGIN {total=0; count=0;} { if ($2 == 1) { total += $3; count++;} } END { print (count == 0) ? "-" : total/count }')
         #Outages
         failurelist=$(cat $pingLogFile | awk --field-separator=, '{if ($2 == 0) {print "- Outage on " strftime("%Y-%m-%d at %H:%M:%S", $1) } }')
 
         statusLogFile="/var/log/pinger/${ENDPOINT_NAME// /_}.history.log"
-        statusReportHistory=$(tail -n50 "$statusLogFile" | tac | awk --field-separator=, '{print "- " $1 " ~ " $2 ", " $3 "%, " $4 "s"}')
+        statusReportHistory=$(tail -n50 "$statusLogFile" | tac | awk --field-separator=, '{print "- " $1 " ~ " $2 ", " $3 "%, " (($4 == "-") ? "---" : $4 "s")}')
         echo "$startdate,$enddate,${percentup},${avgpingtime}" >> "$statusLogFile"
 
-        echo "`date +"%Y-%m-%d %R"`: Sending status email - $startdate to $enddate: Uptime ${percentup}%, Avg Ping Time ${avgpingtime}sec" >> /proc/1/fd/1
+        echo "`date +"%Y-%m-%d %R"`: Sending status email - $startdate to $enddate: Uptime ${percentup}%, Avg Ping Time $( [ $avgpingtime == '-' ] && echo '---' || echo ${avgpingtime}sec )" >> /proc/1/fd/1
         cat <<EOF | /usr/sbin/sendmail -t
 To: $TO_EMAIL_ADDR
 Subject: STATUS REPORT - $ENDPOINT_NAME
@@ -86,7 +87,7 @@ Failed Pings: $numfails $([ "$failmin" == 0 ] && echo "" || echo " (down approx 
 - Pinging every $INTERVAL_MIN min
 - Total Pings: $ttlpings
 Uptime Percent: ${percentup}% 
-Avg Ping Time: ${avgpingtime}s
+Avg Ping Time: $([ "$avgpingtime" == "-" ] && echo "---" || echo "${avgpingtime}s")
 
 Ping Failures:
 $([ "$failurelist" == "" ] && echo "  (None)" || echo "${failurelist}")
@@ -101,5 +102,5 @@ EOF
 fi;
 echo "${ts},$(( $numerr==0 ? 1 : 0 )),$pingtime" >> "$pingLogFile"
 
-echo $numerr > /var/local/pinger_err
+echo $numerr > $pingErrFile
 

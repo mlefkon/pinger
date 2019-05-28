@@ -10,19 +10,19 @@ This was designed to work with Zoho mail's SMTP relay.  It may work with many ot
 
 ## Configuration (Environment Variables)
 - Target Server
+  - **ENDPOINT_NAME:**                default: "Pinger", used for email 'subject' & logfile names
   - **PING_URI:**                     required, any valid curl URI
   - **EXPECTED_RESPONSE:**            required, expected text body returned from PING_URI
+- Timing
+  - **INTERVAL_MIN:**                 default: 5, minutes between pings
+  - **THRESHOLD_FAILS_FOR_EMAIL:**    default: 1, num of failures before an alert email is sent
 - Mail Relay
   - **RELAY_HOST:**                   required, format (incl sq brackets): [relay.host.tld]:port
   - **RELAY_USERNAME:**               required, user's login to relay mail host
   - **RELAY_PASSWORD:**               required
   - **RELAY_SENDER_EMAIL_ADDRESS:**   required, should be permitted to send mails by relay host, often same as username
   - **RELAY_SENDER_INFORMAL_NAME:**   default: Pinger
-- Timing
-  - **INTERVAL_MIN:**                 default: 5, minutes between pings
-  - **THRESHOLD_FAILS_FOR_EMAIL:**    default: 1, num of failures before an alert email is sent
-- Email
-  - **ENDPOINT_NAME:**                default: "Pinger", will appear as 'subject' in emails
+- Notification
   - **TO_EMAIL_ADDR:**                required, recipient of alert emails
 - Status Report 
   - **STATUS_EMAIL_DAYS**             default: 30, Status report email will be send every X days
