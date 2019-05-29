@@ -1,6 +1,6 @@
 # Pinger - crontab curl requests & email on failure
 
-Source repository [Github: mlefkon/pinger](https://github.com/mlefkon/pinger)
+Image repository [Dockerhub: mlefkon/pinger](https://hub.docker.com/r/mlefkon/pinger) , Source repository [Github: mlefkon/pinger](https://github.com/mlefkon/pinger)
 
 ## What it does
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-pingErrFile="/var/log/pinger/${ENDPOINT_NAME// /_}.ping.err"
+pingErrFile="/var/log/pinger/${ENDPOINT_NAME// /_}.fails"
 numerr=$([ -f $pingErrFile ] && cat $pingErrFile || echo 0);
 lastnumerr=numerr;
 
