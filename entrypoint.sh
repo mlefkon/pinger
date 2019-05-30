@@ -47,7 +47,7 @@ if [ $firstStatusTS -eq 0 ];
         logfiletext="Ping log file does not exist.  A new file will be initialized."
         inittext="INIT"
     else 
-        logfiletext="Ping log file already exists, starting on $(date -d @$firstStatusTS +%D), $(cat $pingLogFile | wc -l) pings so far."; 
+        logfiletext="Ping log file already exists, starting on $(date -d @$firstStatusTS +%D), with $(cat $pingLogFile | wc -l) pings so far."; 
         inittext="RE-INIT (reboot)"
     fi;
 
