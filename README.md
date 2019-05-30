@@ -36,16 +36,18 @@ At the end of each `${STATUS_EMAIL_DAYS}` time period and email will be sent wit
 
 ## Historical Data
 
-Data is saved to `${ENDPOINT_NAME}.log` files in `/var/log/pinger/`. A docker volume can be mounted here to persist. There are two CSV files with the formats:
-- Ping History (only current period. Prior period is moved to ~.prior.log)
+Data is saved to `${ENDPOINT_NAME}.{ping|fails|history}.log` files in `/var/log/pinger/`. A docker volume can be mounted here to persist. There are two CSV files with the formats:
+- Pings (~.ping.log has only current period. Prior period is moved to ~.prior.log)
 	- Unix Timestamp
-	- State (1- endpoint is up, 0- endpoint is down)
-	- Ping time
-- Status History
+	- Result (1- endpoint is up, 0- endpoint is down)
+	- Ping Response Time
+- Status History (~.history.log)
 	- From Date
 	- To Date
 	- Up Time Percentage
 	- Average Ping Time
+- Fails (~.fails.log)
+	- Number of current fails (reset to zero after a success)
 
 ## Run
 ```bash
