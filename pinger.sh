@@ -1,6 +1,6 @@
 #!/bin/bash
 
-pingErrFile="/var/log/pinger/${ENDPOINT_NAME// /_}.fails"
+pingErrFile="/var/log/pinger/${ENDPOINT_NAME// /_}.fails.log"
 numerr=$([ -f $pingErrFile ] && cat $pingErrFile);
     re='^[0-9]+$'
     if ! [[ $numerr =~ $re ]]; then numerr=0; fi;
@@ -45,7 +45,7 @@ EOF
 # LOGGING
 ts=$(date +%s)
 pingLogFile="/var/log/pinger/${ENDPOINT_NAME// /_}.ping.log"
-pingPriorLogFile="/var/log/pinger/${ENDPOINT_NAME// /_}.ping.prior.log"
+pingPriorLogFile="/var/log/pinger/${ENDPOINT_NAME// /_}.prior.log"
 firstStatusTS=$([ -f $pingLogFile ] && head -n1 $pingLogFile | sed 's/,.*//' || echo 0)
 # STATUS REPORT EMAIL
 if [[ $firstStatusTS -ne 0 && $firstStatusTS -le $(($ts-${STATUS_EMAIL_DAYS:=30}*86400)) ]];  # 86400=one day in seconds 
