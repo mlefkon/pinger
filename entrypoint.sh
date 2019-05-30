@@ -68,7 +68,10 @@ cronjob="
 \n*/${INTERVAL_MIN:=5} * * * * /usr/local/pinger.sh
 \n
 "
-    crontab -u root -r > /dev/null
+    if crontab -u root -r > /dev/null 2>&1
+		then
+			echo "Prior Crontab has been removed."
+		fi
     echo -e $cronjob | crontab -u root -; 
     echo "Crontab has been set."
     set +f
