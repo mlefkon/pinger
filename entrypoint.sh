@@ -45,10 +45,10 @@ firstStatusTS=$([ -f $pingLogFile ] && head -n1 $pingLogFile | sed 's/,.*//' || 
 if [ $firstStatusTS -eq 0 ]; 
     then 
         logfiletext="Ping log file does not exist.  A new file will be initialized."
-		inittext="INIT"
+        inittext="INIT"
     else 
         logfiletext="Ping log file already exists, starting on $(date -d @$firstStatusTS +%D), $(cat $pingLogFile | wc -l) pings so far."; 
-		inittext="RE-INIT (reboot)"
+        inittext="RE-INIT (reboot)"
     fi;
 
 echo "Configuring Crontab job..."
@@ -69,9 +69,9 @@ cronjob="
 \n
 "
     if crontab -u root -r > /dev/null 2>&1
-		then
-			echo "Prior Crontab has been removed."
-		fi
+        then
+            echo "Prior Crontab has been removed."
+        fi
     echo -e $cronjob | crontab -u root -; 
     echo "Crontab has been set."
     set +f

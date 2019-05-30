@@ -1,7 +1,9 @@
 #!/bin/bash
 
 pingErrFile="/var/log/pinger/${ENDPOINT_NAME// /_}.fails"
-numerr=$([ -f $pingErrFile ] && cat $pingErrFile || echo 0);
+numerr=$([ -f $pingErrFile ] && cat $pingErrFile);
+    re='^[0-9]+$'
+    if ! [[ $numerr =~ $re ]]; then numerr=0; fi;
 lastnumerr=numerr;
 
 pingstart=$(date +%s%N)
