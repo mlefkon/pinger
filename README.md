@@ -9,6 +9,7 @@ A docker container cronjob runs `curl` to 'ping' your server/endpoint. An email 
 This was designed to work with Zoho mail's SMTP relay.  It may work with many others.
 
 ## Configuration (Environment Variables)
+
 - Target Server
   - **ENDPOINT_NAME:**                default: "Pinger", used for email 'subject' & logfile names
   - **PING_URI:**                     required, any valid curl URI
@@ -26,9 +27,11 @@ This was designed to work with Zoho mail's SMTP relay.  It may work with many ot
   - **TO_EMAIL_ADDR:**                required, recipient of alert emails
 - Status Report 
   - **STATUS_EMAIL_DAYS**             default: 30, Status report email will be send every X days
-	
+
 ## Status Report
+
 At the end of each `${STATUS_EMAIL_DAYS}` time period and email will be sent with:
+
 - Start/End Dates
 - Total down time (& times of failures)
 - Percent up  
@@ -37,19 +40,21 @@ At the end of each `${STATUS_EMAIL_DAYS}` time period and email will be sent wit
 ## Historical Data
 
 Data is saved to `${ENDPOINT_NAME}.{ping|fails|history}.log` files in `/var/log/pinger/`. A docker volume can be mounted here to persist. There are two CSV files with the formats:
+
 - Pings (~.ping.log has only current period. Prior period is moved to ~.prior.log)
-	- Unix Timestamp
-	- Result (1- endpoint is up, 0- endpoint is down)
-	- Ping Response Time
+  - Unix Timestamp
+  - Result (1- endpoint is up, 0- endpoint is down)
+  - Ping Response Time
 - Status History (~.history.log)
-	- From Date
-	- To Date
-	- Up Time Percentage
-	- Average Ping Time
+  - From Date
+  - To Date
+  - Up Time Percentage
+  - Average Ping Time
 - Fails (~.fails.log)
-	- Number of current fails (reset to zero after a success)
+  - Number of current fails (reset to zero after a success)
 
 ## Run
+
 ```bash
     $ docker run --name mypinger -d \
     -e ENDPOINT_NAME="My Pinger" \
@@ -66,4 +71,3 @@ Data is saved to `${ENDPOINT_NAME}.{ping|fails|history}.log` files in `/var/log/
     -e STATUS_EMAIL_DAYS=7 \
     mlefkon/pinger 
 ```
-
