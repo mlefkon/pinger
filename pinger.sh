@@ -4,7 +4,7 @@ pingErrFile="/var/log/pinger/${ENDPOINT_NAME// /_}.fails.log"
 numerr=$([ -f $pingErrFile ] && cat $pingErrFile);
     re='^[0-9]+$'
     if ! [[ $numerr =~ $re ]]; then numerr=0; fi;
-lastnumerr=numerr;
+lastnumerr=$numerr;
 
 pingstart=$(date +%s%N)
 response=$(curl --url $PING_URI)
