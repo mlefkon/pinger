@@ -103,6 +103,6 @@ EOF
 
 sleep 30
 echo "  If email not received, examine Postfix mail logs: /var/log/maillog"
-cat /var/log/maillog | egrep "to=.* relay=.* status=" | grep -v root
+cat /var/log/maillog | egrep "to=.* relay=.* status=" | grep -v root | tail -n1
 
 sleep infinity
