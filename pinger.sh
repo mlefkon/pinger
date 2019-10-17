@@ -7,7 +7,7 @@ numerr=$([ -f $pingErrFile ] && cat $pingErrFile);
 lastnumerr=$numerr;
 
 pingstart=$(date +%s%N)
-response=$(curl --url $PING_URI)
+response=$(curl -s --url $PING_URI)
 if [[ $? == 0 && $response == $EXPECTED_RESPONSE ]] ; then let numerr=0; else let numerr=$((numerr + 1)); fi;
 pingnano=$((($(date +%s%N) - $pingstart)))
 pingtime=`echo "scale=4; $pingnano/1000000000" | bc -l | sed 's/^\./0./'`
