@@ -1,79 +1,100 @@
 #!/bin/bash
 
-pingErrFile="/var/log/pinger/${ENDPOINT_NAME// /_}.fails.log"
-numerr=$([ -f $pingErrFile ] && cat $pingErrFile);
+timestamp=$(date +%s)
+
+pingErrFile="/var/log/pinger/${ENDPOINT_NAME// /_}.num.fails.log"
+numErrs=$([ -f $pingErrFile ] && cat $pingErrFile);
     re='^[0-9]+$'
-    if ! [[ $numerr =~ $re ]]; then numerr=0; fi;
-lastnumerr=$numerr;
+    if ! [[ $numErrs =~ $re ]]; then numErrs=0; fi;
+lastNumErrs=$numErrs;
 
-pingstart=$(date +%s%N)
-response=$(curl -s --url $PING_URI)
-if [[ $? == 0 && $response == $EXPECTED_RESPONSE ]] ; then let numerr=0; else let numerr=$((numerr + 1)); fi;
-pingnano=$((($(date +%s%N) - $pingstart)))
-pingtime=`echo "scale=4; $pingnano/1000000000" | bc -l | sed 's/^\./0./'`
+pingStart=$(date +%s%N)
+response=$(curl -s --url $PING_URL)
+curlErrCode=$?
+pingNano=$((($(date +%s%N) - $pingStart)))
+pingTime=`echo "scale=4; $pingNano/1000000000" | bc -l | sed 's/^\./0./'`
 
-if [ $numerr -ge $THRESHOLD_FAILS_FOR_EMAIL ]; 
+connectionErrCode=0
+if [ $curlErrCode -eq 0 ]; then
+        if [ "$response" = "$EXPECTED_RESPONSE" ] ; then
+            let numErrs=0; 
+        else
+			# tgt response error
+            let numErrs=$((numErrs + 1));
+        fi;
+    else
+        ping -c 1 -q -w 1 $RELIABLE_REFERENCE_PING_HOST &> /dev/null
+        connectionErrCode=$?
+        if [ $connectionErrCode -eq 0 ]; then
+            # tgt connection error
+            let numErrs=$((numErrs + 1));
+        #else
+        #    do nothing. $numErrs remains unchanged because is src problem. tgt status is unknown.
+        fi;
+    fi;
+
+if [ $numErrs -ge $THRESHOLD_FAILS_FOR_EMAIL ] && [ $connectionErrCode -eq 0 ];
     then 
-        echo "`date +"%Y-%m-%d %R"`: Sending ERR email. Ping errors: $numerr" >> /proc/1/fd/1
+        echo "`date +"%Y-%m-%d %R"`: Sending ERR email. Pinger errors: $numErrs" >> /proc/1/fd/1
 cat <<EOF | /usr/sbin/sendmail -t
 To: $TO_EMAIL_ADDR
 Subject: ERR - $ENDPOINT_NAME
 From: $RELAY_SENDER_INFORMAL_NAME <$RELAY_SENDER_EMAIL_ADDRESS>
 
-Ping has failed on: $PING_URI
-Failed Times: $numerr
-$([ "$numerr" == "$THRESHOLD_FAILS_FOR_EMAIL" ] && echo "(Threshold to send email: $THRESHOLD_FAILS_FOR_EMAIL fails)" || echo "")
+Ping has failed on: $PING_URL
+Failed Times: $numErrs
+$([ "$numErrs" == "$THRESHOLD_FAILS_FOR_EMAIL" ] && echo "(Threshold to send email: $THRESHOLD_FAILS_FOR_EMAIL fails)" || echo "")
 
 
 EOF
     fi
 
-if [[ $numerr -eq 0 && $lastnumerr -ge $THRESHOLD_FAILS_FOR_EMAIL ]]; 
+if [ $numErrs -eq 0 ] && [ $lastNumErrs -ge $THRESHOLD_FAILS_FOR_EMAIL ]; 
     then
-        echo "`date +"%Y-%m-%d %R"`: Sending OK email. Condition ok. Prior errors: $numerr" >> /proc/1/fd/1
+        echo "`date +"%Y-%m-%d %R"`: Sending OK email. Condition ok. Prior errors: $numErrs" >> /proc/1/fd/1
 cat <<EOF | /usr/sbin/sendmail -t
 To: $TO_EMAIL_ADDR
 Subject: OK - $ENDPOINT_NAME
 From: $RELAY_SENDER_INFORMAL_NAME <$RELAY_SENDER_EMAIL_ADDRESS>
 
-Ping is now OK on: $PING_URI
-  (previous # errors: $lastnumerr)
+Ping is now OK on: $PING_URL
+  (previous # errors: $lastNumErrs)
 
 EOF
     fi;
 
 # LOGGING
-ts=$(date +%s)
-pingLogFile="/var/log/pinger/${ENDPOINT_NAME// /_}.ping.log"
-pingPriorLogFile="/var/log/pinger/${ENDPOINT_NAME// /_}.prior.log"
-firstStatusTS=$([ -f $pingLogFile ] && head -n1 $pingLogFile | sed 's/,.*//' || echo 0)
+pingLogFile="/var/log/pinger/${ENDPOINT_NAME// /_}.ping.curr.log"
+pingPriorLogFile="/var/log/pinger/${ENDPOINT_NAME// /_}.ping.prior.log"
+firstFileTimestamp=$([ -f $pingLogFile ] && head -n1 $pingLogFile | sed 's/,.*//' || echo 0)
 # STATUS REPORT EMAIL
-if [[ $firstStatusTS -ne 0 && $firstStatusTS -le $(($ts-${STATUS_EMAIL_DAYS:=30}*86400)) ]];  # 86400=one day in seconds 
+if [ $firstFileTimestamp -ne 0 ] && [ $firstFileTimestamp -le $(($timestamp-${STATUS_EMAIL_DAYS:=30}*86400)) ];  # 86400=one day in seconds
     then 
         #Time Period
-        startdate=$(date -d @$firstStatusTS +%D)
-        enddate=$(date -d @$ts +%D)
+        startDate=$(date -d @$firstFileTimestamp +%D)
+        endDate=$(date -d @$timestamp +%D)
         #Percent Up
-        numfails=$(cat $pingLogFile | awk --field-separator=, 'BEGIN {count=0} { if ($2 == 0) { count++ } } END {print count}' )
-        ttlpings=$(cat $pingLogFile | wc -l)
-        failmin=$(($numfails*$INTERVAL_MIN))
-        failsecs=$(($failmin*60))
-        totalsecs=$(( $ts-$firstStatusTS )) 
-        if [ $ttlpings == $numfails ]; then 
-            percentup=0  # avoid rounding errors
+        numFails=$(cat $pingLogFile | awk --field-separator=, 'BEGIN {count=0} { if ($2 == 0) { count++ } } END {print count}' )
+        numConnErr=$(cat $pingLogFile | awk --field-separator=, 'BEGIN {count=0} { if ($2 == 2) { count++ } } END {print count}' )
+        ttlPings=$(cat $pingLogFile | wc -l)
+        failMin=$(($numFails*$INTERVAL_MIN))
+        failSecs=$(($failMin*60))
+        totalSecs=$(( $timestamp-$firstFileTimestamp )) 
+        if [ $ttlPings -eq $numFails ]; then 
+            percentUp=0  # avoid rounding errors
         else    
-            percentup=`echo "scale=4; 100-100*$failsecs/$totalsecs" | bc -l`
+            percentUp=`echo "scale=4; 100-100*$failSecs/$totalSecs" | bc -l`
         fi;
         #Average Ping Time
-        avgpingtime=$(cat $pingLogFile | awk --field-separator=, 'BEGIN {total=0; count=0;} { if ($2 == 1) { total += $3; count++;} } END { print (count == 0) ? "-" : total/count }')
+        avgPingTime=$(cat $pingLogFile | awk --field-separator=, 'BEGIN {total=0; count=0;} { if ($2 == 1) { total += $3; count++;} } END { print (count == 0) ? "-" : total/count }')
         #Outages
-        failurelist=$(cat $pingLogFile | awk --field-separator=, '{if ($2 == 0) {print "- Outage on " strftime("%Y-%m-%d at %H:%M:%S", $1) } }')
+        failureList=$(cat $pingLogFile | awk --field-separator=, '{if ($2 == 0) {print "- Outage on " strftime("%Y-%m-%d at %H:%M:%S", $1) } }')
 
-        statusLogFile="/var/log/pinger/${ENDPOINT_NAME// /_}.history.log"
+        statusLogFile="/var/log/pinger/${ENDPOINT_NAME// /_}.summary.history.log"
         statusReportHistory=$(tail -n50 "$statusLogFile" | tac | awk --field-separator=, '{print "- " $1 " ~ " $2 ", " $3 "%, " (($4 == "-") ? "---" : $4 "s")}')
-        echo "$startdate,$enddate,${percentup},${avgpingtime}" >> "$statusLogFile"
+        echo "$startDate,$endDate,${percentUp},${avgPingTime}" >> "$statusLogFile"
 
-        echo "`date +"%Y-%m-%d %R"`: Sending status email - $startdate to $enddate: Uptime ${percentup}%, Avg Ping Time $( [ $avgpingtime == '-' ] && echo '---' || echo ${avgpingtime}sec )" >> /proc/1/fd/1
+        echo "`date +"%Y-%m-%d %R"`: Sending status email - $startDate to $endDate: Uptime ${percentUp}%, Avg Ping Time $( [ $avgPingTime == '-' ] && echo '---' || echo ${avgPingTime}sec )" >> /proc/1/fd/1
         cat <<EOF | /usr/sbin/sendmail -t
 To: $TO_EMAIL_ADDR
 Subject: STATUS REPORT - $ENDPOINT_NAME
@@ -83,16 +104,17 @@ Pinger Status Report
 
 $ENDPOINT_NAME
 
-Time Period: $startdate to $enddate
+Time Period: $startDate to $endDate
 
-Failed Pings: $numfails $([ "$failmin" == 0 ] && echo "" || echo " (down approx ${failmin} minutes)")
+Failed Pings: $numFails $([ "$failMin" == 0 ] && echo "" || echo " (down approx ${failMin} minutes)")
+Outgoing Connection Problems: $numConnErr
 - Pinging every $INTERVAL_MIN min
-- Total Pings: $ttlpings
-Uptime Percent: ${percentup}% 
-Avg Ping Time: $([ "$avgpingtime" == "-" ] && echo "---" || echo "${avgpingtime}s")
+- Total Pings: $ttlPings
+Uptime Percent: ${percentUp}% 
+Avg Ping Time: $([ "$avgPingTime" == "-" ] && echo "---" || echo "${avgPingTime}s")
 
 Ping Failures:
-$([ "$failurelist" == "" ] && echo "  (None)" || echo "${failurelist}")
+$([ "$failureList" == "" ] && echo "  (None)" || echo "${failureList}")
 
 Recent History:
 > Time Period, Pct Up, Avg Ping Time
@@ -102,7 +124,16 @@ EOF
 
         mv -f "$pingLogFile" "${pingPriorLogFile}"
 fi;
-echo "${ts},$(( $numerr==0 ? 1 : 0 )),$pingtime" >> "$pingLogFile"
 
-echo $numerr > $pingErrFile
+if [ $connectionErrCode -ne 0 ]; then
+    statusCode=2
+elif [ $numErrs -eq 0 ]; then
+    statusCode=1
+else
+    statusCode=0
+fi
+
+echo "${timestamp},${statusCode},${pingTime}" >> "$pingLogFile"
+
+echo $numErrs > $pingErrFile
 

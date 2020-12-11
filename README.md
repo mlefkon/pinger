@@ -11,10 +11,11 @@ This was designed to work with Zoho mail's SMTP relay.  It may work with many ot
 ## Configuration (Environment Variables)
 
 - Target Server
-  - **ENDPOINT_NAME:**                default: "Pinger", used for email 'subject' & logfile names
-  - **PING_URI:**                     required, any valid curl URI
-  - **EXPECTED_RESPONSE:**            required, expected text body returned from PING_URI
+  - **ENDPOINT_NAME:**                default: "Pinger", used for email 'subject' & logfile names about this Pinger instance
+  - **PING_URL:**                     required, any valid curl URL
+  - **EXPECTED_RESPONSE:**            required, expected text body returned from PING_URL
   - **INTERVAL_MIN:**                 default: 5, minutes between pings
+  - **RELIABLE_REFERENCE_PING_HOST:** required, for connectivity test in case of PING_URL failure. Must be a ping-responsive host, not a URL.
 - Mail Relay
   - **RELAY_HOST:**                   required, format (incl sq brackets): [relay.host.tld]:port
   - **RELAY_USERNAME:**               required, user's login to relay mail host
@@ -39,16 +40,16 @@ At the end of each `${STATUS_EMAIL_DAYS}` time period and email will be sent wit
 
 Data is saved to `${ENDPOINT_NAME}.{ping|fails|history}.log` files in `/var/log/pinger/`. A docker volume can be mounted here to persist. These are CSV files with the formats:
 
-- Pings (~.ping.log, has only current period. This is moved to ~.prior.log after status report is sent.)
+- Pings (~.ping.curr.log, has only current period. This is moved to ~.ping.prior.log after status report is sent.)
   - Unix Timestamp
   - Result (1- endpoint is up, 0- endpoint is down)
   - Ping Response Time
-- Status History (~.history.log)
+- Summary History (~.summary.history.log)
   - From Date
   - To Date
   - Up Time Percentage
   - Average Ping Time
-- Fails (~.fails.log)
+- Fails (~.num.fails.log)
   - Number of current fails (reset to zero after a success)
 
 ## Run
@@ -58,7 +59,8 @@ Data is saved to `${ENDPOINT_NAME}.{ping|fails|history}.log` files in `/var/log/
     -e ENDPOINT_NAME="My Pinger" \
     -e INTERVAL_MIN=3 \
     -e THRESHOLD_FAILS_FOR_EMAIL=2 \
-    -e PING_URI=https://my.url.com/myscript \
+    -e PING_URL=https://my.url.com/myscript \
+    -e RELIABLE_REFERENCE_PING_HOST=google.com \
     -e EXPECTED_RESPONSE="eg: Ping succeeded" \
     -e RELAY_HOST=[mail.relay.com]:587 \
     -e RELAY_USERNAME=user \

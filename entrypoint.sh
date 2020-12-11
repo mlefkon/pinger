@@ -2,18 +2,20 @@
 
 buildDate=$(cat /usr/local/pinger.build)
 echo "Image Build Date: $buildDate"
-echo "Endpoint: ${ENDPOINT_NAME:=Pinger}"
+echo "Instance Endpoint Name: ${ENDPOINT_NAME:=Pinger}"
 
 echo "Checking required Environment Variables..."
     fatal=0
-    if [ "${PING_URI:-missing}"                   == "missing" ]; then fatal=1; echo "Env var PING_URI is required.";                   fi;
-    if [ "${EXPECTED_RESPONSE:-missing}"          == "missing" ]; then fatal=1; echo "Env var EXPECTED_RESPONSE is required.";          fi;
-    if [ "${RELAY_HOST:-missing}"                 == "missing" ]; then fatal=1; echo "Env var RELAY_HOST is required.";                 fi;
-    if [ "${RELAY_USERNAME:-missing}"             == "missing" ]; then fatal=1; echo "Env var RELAY_USERNAME is required.";             fi;
-    if [ "${RELAY_PASSWORD:-missing}"             == "missing" ]; then fatal=1; echo "Env var RELAY_PASSWORD is required.";             fi;
-    if [ "${RELAY_SENDER_EMAIL_ADDRESS:-missing}" == "missing" ]; then fatal=1; echo "Env var RELAY_SENDER_EMAIL_ADDRESS is required."; fi;
-    if [ "${TO_EMAIL_ADDR:-missing}"              == "missing" ]; then fatal=1; echo "Env var TO_EMAIL_ADDR is required.";              fi;
-    if [ $fatal -eq 1 ]; then echo "FATAL ERROR: missing environment variables need to be defined."; exit; fi;
+    if [ "${PING_URL:-missing}"                     == "missing" ]; then fatal=1; echo "Env var PING_URL is required.";                                      fi;
+    if [ "${EXPECTED_RESPONSE:-missing}"            == "missing" ]; then fatal=1; echo "Env var EXPECTED_RESPONSE is required.";                             fi;
+    if [ "${RELAY_HOST:-missing}"                   == "missing" ]; then fatal=1; echo "Env var RELAY_HOST is required.";                                    fi;
+    if [ "${RELAY_USERNAME:-missing}"               == "missing" ]; then fatal=1; echo "Env var RELAY_USERNAME is required.";                                fi;
+    if [ "${RELAY_PASSWORD:-missing}"               == "missing" ]; then fatal=1; echo "Env var RELAY_PASSWORD is required.";                                fi;
+    if [ "${RELAY_SENDER_EMAIL_ADDRESS:-missing}"   == "missing" ]; then fatal=1; echo "Env var RELAY_SENDER_EMAIL_ADDRESS is required.";                    fi;
+    if [ "${TO_EMAIL_ADDR:-missing}"                == "missing" ]; then fatal=1; echo "Env var TO_EMAIL_ADDR is required.";                                 fi;
+    if [ "${RELIABLE_REFERENCE_PING_HOST:-missing}" == "missing" ]; then fatal=1; echo "Env var RELIABLE_REFERENCE_PING_HOST is required (eg. google.com)."; fi;
+    if [ -z "${RELIABLE_REFERENCE_PING_HOST##*/*}"               ]; then fatal=1; echo "Env var RELIABLE_REFERENCE_PING_HOST is a host, not a URL.";         fi;
+    if [ $fatal -eq 1 ]; then echo "FATAL ERROR: missing/bad environment variables need to be corrected."; exit; fi;
 
 echo "Configuring Postfix..."  
     # /etc/postfix/main.cf
@@ -40,7 +42,7 @@ echo "Configuring Postfix..."
     chmod 0600      /etc/postfix/sasl_passwd /etc/postfix/sasl_passwd.db; 
 
 echo "Checking logs..."
-pingLogFile="/var/log/pinger/${ENDPOINT_NAME// /_}.ping.log"
+pingLogFile="/var/log/pinger/${ENDPOINT_NAME// /_}.ping.curr.log"
 firstStatusTS=$([ -f $pingLogFile ] && head -n1 $pingLogFile | sed 's/,.*//' || echo 0);
 if [ $firstStatusTS -eq 0 ]; 
     then 
@@ -57,7 +59,8 @@ cronjob="
 \nENDPOINT_NAME=\"${ENDPOINT_NAME:=Pinger}\"
 \nINTERVAL_MIN=\"${INTERVAL_MIN:=5}\"
 \nTHRESHOLD_FAILS_FOR_EMAIL=\"${THRESHOLD_FAILS_FOR_EMAIL:=1}\"
-\nPING_URI=\"${PING_URI}\"
+\nPING_URL=\"${PING_URL}\"
+\nRELIABLE_REFERENCE_PING_HOST=\"${RELIABLE_REFERENCE_PING_HOST}\"
 \nEXPECTED_RESPONSE=\"${EXPECTED_RESPONSE}\"
 \nRELAY_SENDER_EMAIL_ADDRESS=\"${RELAY_SENDER_EMAIL_ADDRESS}\"
 \nRELAY_SENDER_INFORMAL_NAME=\"${RELAY_SENDER_INFORMAL_NAME:=Pinger}\"
@@ -91,10 +94,11 @@ Ping has been successfully initialized.
 
 $ENDPOINT_NAME
 
-URI: $PING_URI
+URL: $PING_URL
 Expected Response: "$EXPECTED_RESPONSE"
 Ping every: $INTERVAL_MIN minunte(s)
 Threshold: $THRESHOLD_FAILS_FOR_EMAIL failure(s) will be required to send an email.
+Reference Ping Host: $RELIABLE_REFERENCE_PING_HOST will be pinged to verify source server's connection when no response from URL.
 Status Report: Emailed every ${STATUS_EMAIL_DAYS} day(s).
 History: $logfiletext
 - Note: mount /var/log/pinger/ as a docker volume to preserve history between reboots.
