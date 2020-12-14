@@ -34,7 +34,7 @@ At the end of each `${STATUS_EMAIL_DAYS}` time period and email will be sent wit
 - Start/End Dates
 - Total down time (& times of failures)
 - Percent up  
-- Average ping time
+- Average/Median ping time
 
 ## Historical Data
 
