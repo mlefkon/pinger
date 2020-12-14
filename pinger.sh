@@ -19,7 +19,7 @@ if [ $curlErrCode -eq 0 ]; then
         if [ "$response" = "$EXPECTED_RESPONSE" ] ; then
             let numErrs=0; 
         else
-			# tgt response error
+            # tgt response error
             let numErrs=$((numErrs + 1));
         fi;
     else
@@ -29,7 +29,7 @@ if [ $curlErrCode -eq 0 ]; then
             # tgt connection error
             let numErrs=$((numErrs + 1));
         #else
-        #    do nothing. $numErrs remains unchanged because is src problem. tgt status is unknown.
+        #    src connection err, so do nothing. $numErrs remains unchanged because is src problem. tgt status is unknown.
         fi;
     fi;
 
@@ -85,8 +85,8 @@ if [ $firstFileTimestamp -ne 0 ] && [ $firstFileTimestamp -le $(($timestamp-${ST
         else    
             percentUp=`echo "scale=4; 100-100*$failSecs/$totalSecs" | bc -l`
         fi;
-        #Average Ping Time
         avgPingTime=$(cat $pingLogFile | awk --field-separator=, 'BEGIN {total=0; count=0;} { if ($2 == 1) { total += $3; count++;} } END { print (count == 0) ? "-" : total/count }')
+        medianPingTime=$(cat $pingLogFile | sort -n -t, -k3 | awk --field-separator=, 'BEGIN {i=0;} { if ($2 == 1) { a[i++]=$3;} } END { print (i == 0) ? "-" : a[int(i/2)]; }')
         #Outages
         failureList=$(cat $pingLogFile | awk --field-separator=, '{if ($2 == 0) {print "- Outage on " strftime("%Y-%m-%d at %H:%M:%S", $1) } }')
 
@@ -112,6 +112,7 @@ Outgoing Connection Problems: $numConnErr
 - Total Pings: $ttlPings
 Uptime Percent: ${percentUp}% 
 Avg Ping Time: $([ "$avgPingTime" == "-" ] && echo "---" || echo "${avgPingTime}s")
+Median Ping Time: $([ "$medianPingTime" == "-" ] && echo "---" || echo "${medianPingTime}s")
 
 Ping Failures:
 $([ "$failureList" == "" ] && echo "  (None)" || echo "${failureList}")
