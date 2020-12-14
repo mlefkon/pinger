@@ -48,7 +48,7 @@ Data is saved to `${ENDPOINT_NAME}.{ping|fails|history}.log` files in `/var/log/
   - From Date
   - To Date
   - Up Time Percentage
-  - Average Ping Time
+  - Average/Median Ping Time
 - Fails (~.num.fails.log)
   - Number of current fails (reset to zero after a success)
 
