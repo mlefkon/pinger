@@ -1,8 +1,7 @@
-FROM centos:6.10
+FROM centos:8
 MAINTAINER Marc Lefkon
 
-COPY CentOS-Base.repo /etc/yum.repos.d/CentOS-Base.repo
-RUN yum -y install rsyslog postfix cronie cyrus-sasl cyrus-sasl-plain bc
+RUN dnf -y install rsyslog postfix cronie cyrus-sasl cyrus-sasl-plain bc
 
 COPY pinger.sh \
      entrypoint.sh \

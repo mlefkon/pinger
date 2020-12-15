@@ -80,9 +80,9 @@ cronjob="
     set +f
 
 echo "Normal Startup..."
-    service rsyslog start
-    service postfix start
-    service crond start
+   /usr/sbin/rsyslogd
+   /usr/sbin/postfix start
+   /usr/sbin/crond
 
 echo "Sending init/test email..."
     cat <<EOF | /usr/sbin/sendmail -t
@@ -90,8 +90,7 @@ To: $TO_EMAIL_ADDR
 Subject: ${inittext} - $ENDPOINT_NAME
 From: $RELAY_SENDER_INFORMAL_NAME <$RELAY_SENDER_EMAIL_ADDRESS>
 
-Ping has been successfully initialized.
-
+Ping has been successfully initialized (Image Build: $buildDate)
 $ENDPOINT_NAME
 
 URL: $PING_URL

@@ -29,7 +29,8 @@ if [ $curlErrCode -eq 0 ]; then
             # tgt connection error
             let numErrs=$((numErrs + 1));
         #else
-        #    src connection err, so do nothing. $numErrs remains unchanged because is src problem. tgt status is unknown.
+        #    src connection err
+        #    so do nothing. $numErrs remains unchanged because is src problem. tgt status is unknown.
         fi;
     fi;
 
@@ -91,10 +92,10 @@ if [ $firstFileTimestamp -ne 0 ] && [ $firstFileTimestamp -le $(($timestamp-${ST
         failureList=$(cat $pingLogFile | awk --field-separator=, '{if ($2 == 0) {print "- Outage on " strftime("%Y-%m-%d at %H:%M:%S", $1) } }')
 
         statusLogFile="/var/log/pinger/${ENDPOINT_NAME// /_}.summary.history.log"
-        statusReportHistory=$(tail -n50 "$statusLogFile" | tac | awk --field-separator=, '{print "- " $1 " ~ " $2 ", " $3 "%, " (($4 == "-") ? "---" : $4 "s")}')
-        echo "$startDate,$endDate,${percentUp},${avgPingTime}" >> "$statusLogFile"
+        statusReportHistory=$(tail -n50 "$statusLogFile" | tac | awk --field-separator=, '{print "- " $1 " ~ " $2 ", " $3 "%, " (($4 == "-") ? "---" : $4 "s"), " (($5 == "-") ? "---" : $5 "s")}')
+        echo "$startDate,$endDate,${percentUp},${medianPingTime},${avgPingTime}" >> "$statusLogFile"
 
-        echo "`date +"%Y-%m-%d %R"`: Sending status email - $startDate to $endDate: Uptime ${percentUp}%, Avg Ping Time $( [ $avgPingTime == '-' ] && echo '---' || echo ${avgPingTime}sec )" >> /proc/1/fd/1
+        echo "`date +"%Y-%m-%d %R"`: Sending status email - $startDate to $endDate: Uptime ${percentUp}%, Median Ping Time $( [ $medianPingTime == '-' ] && echo '---' || echo ${medianPingTime}sec ), Avg Ping Time $( [ $avgPingTime == '-' ] && echo '---' || echo ${avgPingTime}sec )" >> /proc/1/fd/1
         cat <<EOF | /usr/sbin/sendmail -t
 To: $TO_EMAIL_ADDR
 Subject: STATUS REPORT - $ENDPOINT_NAME
@@ -111,14 +112,14 @@ Outgoing Connection Problems: $numConnErr
 - Pinging every $INTERVAL_MIN min
 - Total Pings: $ttlPings
 Uptime Percent: ${percentUp}% 
-Avg Ping Time: $([ "$avgPingTime" == "-" ] && echo "---" || echo "${avgPingTime}s")
 Median Ping Time: $([ "$medianPingTime" == "-" ] && echo "---" || echo "${medianPingTime}s")
+Avg Ping Time: $([ "$avgPingTime" == "-" ] && echo "---" || echo "${avgPingTime}s")
 
 Ping Failures:
 $([ "$failureList" == "" ] && echo "  (None)" || echo "${failureList}")
 
 Recent History:
-> Time Period, Pct Up, Avg Ping Time
+> Time Period, Pct Up, Median Ping Time, Avg Ping Time
 ${statusReportHistory}
 
 EOF

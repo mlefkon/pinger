@@ -34,7 +34,7 @@ At the end of each `${STATUS_EMAIL_DAYS}` time period and email will be sent wit
 - Start/End Dates
 - Total down time (& times of failures)
 - Percent up  
-- Average/Median ping time
+- Median/Average ping time
 
 ## Historical Data
 
@@ -48,7 +48,8 @@ Data is saved to `${ENDPOINT_NAME}.{ping|fails|history}.log` files in `/var/log/
   - From Date
   - To Date
   - Up Time Percentage
-  - Average/Median Ping Time
+  - Median Ping Time
+  - Average Ping Time
 - Fails (~.num.fails.log)
   - Number of current fails (reset to zero after a success)
 
