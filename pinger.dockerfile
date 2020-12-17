@@ -1,5 +1,5 @@
 FROM centos:8
-MAINTAINER Marc Lefkon
+LABEL maintainer="Marc Lefkon"
 
 RUN dnf -y install rsyslog postfix cronie cyrus-sasl cyrus-sasl-plain bc
 

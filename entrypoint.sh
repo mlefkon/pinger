@@ -17,7 +17,7 @@ echo "Checking required Environment Variables..."
     if [ -z "${RELIABLE_REFERENCE_PING_HOST##*/*}"               ]; then fatal=1; echo "Env var RELIABLE_REFERENCE_PING_HOST is a host, not a URL.";         fi;
     if [ $fatal -eq 1 ]; then echo "FATAL ERROR: missing/bad environment variables need to be corrected."; exit; fi;
 
-echo "Configuring Postfix..."  
+echo "Configuring Postfix..."
     # /etc/postfix/main.cf
     postconf -e "relayhost = ${RELAY_HOST}"
     postconf -e "inet_protocols = ipv4"
@@ -42,42 +42,38 @@ echo "Configuring Postfix..."
     chmod 0600      /etc/postfix/sasl_passwd /etc/postfix/sasl_passwd.db; 
 
 echo "Checking logs..."
-pingLogFile="/var/log/pinger/${ENDPOINT_NAME// /_}.ping.curr.log"
-firstStatusTS=$([ -f $pingLogFile ] && head -n1 $pingLogFile | sed 's/,.*//' || echo 0);
-if [ $firstStatusTS -eq 0 ]; 
-    then 
-        logfiletext="Ping log file does not exist.  A new file will be initialized."
-        inittext="INIT"
-    else 
-        logfiletext="Ping log file already exists, starting on $(date -d @$firstStatusTS +%D), with $(cat $pingLogFile | wc -l) pings so far."; 
-        inittext="RE-INIT (reboot)"
-    fi;
+    pingLogFile="/var/log/pinger/${ENDPOINT_NAME// /_}.ping.curr.log"
+    firstStatusTS=$([ -f $pingLogFile ] && head -n1 $pingLogFile | sed 's/,.*//' || echo 0);
+    if [ "$firstStatusTS" -eq 0 ]; 
+        then 
+            logfiletext="Ping log file does not exist.  A new file will be initialized."
+            inittext="INIT"
+        else 
+            logfiletext="Ping log file already exists, starting on $(date -d "@$firstStatusTS" +%D), with $(wc -l < "$pingLogFile") pings so far."; 
+            inittext="RE-INIT (reboot)"
+        fi;
 
 echo "Configuring Crontab job..."
-set -f
-cronjob="
-\nENDPOINT_NAME=\"${ENDPOINT_NAME:=Pinger}\"
-\nINTERVAL_MIN=\"${INTERVAL_MIN:=5}\"
-\nTHRESHOLD_FAILS_FOR_EMAIL=\"${THRESHOLD_FAILS_FOR_EMAIL:=1}\"
-\nPING_URL=\"${PING_URL}\"
-\nRELIABLE_REFERENCE_PING_HOST=\"${RELIABLE_REFERENCE_PING_HOST}\"
-\nEXPECTED_RESPONSE=\"${EXPECTED_RESPONSE}\"
-\nRELAY_SENDER_EMAIL_ADDRESS=\"${RELAY_SENDER_EMAIL_ADDRESS}\"
-\nRELAY_SENDER_INFORMAL_NAME=\"${RELAY_SENDER_INFORMAL_NAME:=Pinger}\"
-\nTO_EMAIL_ADDR=\"${TO_EMAIL_ADDR}\"
-\nSTATUS_EMAIL_DAYS=\"${STATUS_EMAIL_DAYS:=30}\"
-\n
-\n# m h dom mon dow command
-\n*/${INTERVAL_MIN:=5} * * * * /usr/local/pinger.sh
-\n
-"
+    declare -a aCronJob
+    aCronJob+=("ENDPOINT_NAME=\"${ENDPOINT_NAME:=Pinger}\"")
+    aCronJob+=("INTERVAL_MIN=\"${INTERVAL_MIN:=5}\"")
+    aCronJob+=("THRESHOLD_FAILS_FOR_EMAIL=\"${THRESHOLD_FAILS_FOR_EMAIL:=1}\"")
+    aCronJob+=("PING_URL=\"${PING_URL}\"")
+    aCronJob+=("RELIABLE_REFERENCE_PING_HOST=\"${RELIABLE_REFERENCE_PING_HOST}\"")
+    aCronJob+=("EXPECTED_RESPONSE=\"${EXPECTED_RESPONSE}\"")
+    aCronJob+=("RELAY_SENDER_EMAIL_ADDRESS=\"${RELAY_SENDER_EMAIL_ADDRESS}\"")
+    aCronJob+=("RELAY_SENDER_INFORMAL_NAME=\"${RELAY_SENDER_INFORMAL_NAME:=Pinger}\"")
+    aCronJob+=("TO_EMAIL_ADDR=\"${TO_EMAIL_ADDR}\"")
+    aCronJob+=("STATUS_EMAIL_DAYS=\"${STATUS_EMAIL_DAYS:=30}\"")
+    aCronJob+=("*/${INTERVAL_MIN:=5} * * * * /usr/local/pinger.sh") # CRONTAB format: m h dom moy dow command
+
     if crontab -u root -r > /dev/null 2>&1
         then
             echo "Prior Crontab has been removed."
         fi
-    echo -e $cronjob | crontab -u root -; 
+    IFS=$'\n'  
+    echo -e "${aCronJob[*]}" | crontab -u root -; 
     echo "Crontab has been set."
-    set +f
 
 echo "Normal Startup..."
    /usr/sbin/rsyslogd
@@ -85,27 +81,27 @@ echo "Normal Startup..."
    /usr/sbin/crond
 
 echo "Sending init/test email..."
-    cat <<EOF | /usr/sbin/sendmail -t
-To: $TO_EMAIL_ADDR
-Subject: ${inittext} - $ENDPOINT_NAME
-From: $RELAY_SENDER_INFORMAL_NAME <$RELAY_SENDER_EMAIL_ADDRESS>
+    emailText="To: $TO_EMAIL_ADDR
+        Subject: ${inittext} - $ENDPOINT_NAME
+        From: $RELAY_SENDER_INFORMAL_NAME <$RELAY_SENDER_EMAIL_ADDRESS>
 
-Ping has been successfully initialized (Image Build: $buildDate)
-$ENDPOINT_NAME
+        Ping has been successfully initialized 
+        (Pinger version built on: $buildDate)
 
-URL: $PING_URL
-Expected Response: "$EXPECTED_RESPONSE"
-Ping every: $INTERVAL_MIN minunte(s)
-Threshold: $THRESHOLD_FAILS_FOR_EMAIL failure(s) will be required to send an email.
-Reference Ping Host: $RELIABLE_REFERENCE_PING_HOST will be pinged to verify source server's connection when no response from URL.
-Status Report: Emailed every ${STATUS_EMAIL_DAYS} day(s).
-History: $logfiletext
-- Note: mount /var/log/pinger/ as a docker volume to preserve history between reboots.
+        Name: $ENDPOINT_NAME
+        URL: $PING_URL
+        Expected Response: \"$EXPECTED_RESPONSE\"
+        Ping every: $INTERVAL_MIN minunte(s)
+        Threshold: $THRESHOLD_FAILS_FOR_EMAIL failure(s) will be required to send an email.
+        Reference Ping Host: $RELIABLE_REFERENCE_PING_HOST will be pinged to verify source server's connection when no response from URL.
+        Status Report: Emailed every ${STATUS_EMAIL_DAYS} day(s).
+        History: $logfiletext
+        - Note: mount /var/log/pinger/ as a docker volume to preserve history between reboots.
+        "
+    echo "$emailText" | awk '{$1=$1;print}' | /usr/sbin/sendmail -t
 
-EOF
-
-sleep 30
-echo "  If email not received, examine Postfix mail logs: /var/log/maillog"
-cat /var/log/maillog | egrep "to=.* relay=.* status=" | grep -v root | tail -n1
+    sleep 30
+    echo "  If email not received, examine Postfix mail logs: /var/log/maillog"
+    grep -E "to=.* relay=.* status=" < /var/log/maillog | grep -v root | tail -n1
 
 sleep infinity
