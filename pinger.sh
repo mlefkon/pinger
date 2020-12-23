@@ -1,18 +1,28 @@
-#!/bin/bash
+#!/bin/sh
 
 timestamp=$(date +%s)
 
-pingErrFile="/var/log/pinger/${ENDPOINT_NAME// /_}.num.fails.log"
+pingErrFile=$( echo "/var/log/pinger/${ENDPOINT_NAME}.num.fails.log" | tr "[:blank:]" _ )
 numErrs=$([ -f "$pingErrFile" ] && cat "$pingErrFile");
-    re='^[0-9]+$'
-    if ! [[ $numErrs =~ $re ]]; then numErrs=0; fi;
+    if echo "$numErrs" | test ! "$(grep -e "^[0-9]\{1,\}$")"; 
+        then numErrs=0;
+    fi;
 lastNumErrs=$numErrs;
 
-pingStart=$(date +%s%N)
+#busybox `date` fn does not support nanoseconds (+%s%N), so use sys-time  
+#    https://unix.stackexchange.com/questions/167968/date-in-milliseconds-on-openwrt-on-arduino-yun
+sys_uptime() {
+    sysSec=$(adjtimex | grep time.tv_sec | awk -F : '{print $2}' | tr -d ' ')
+    sysUSec=$(adjtimex | grep time.tv_usec | awk -F : '{printf("%06d\n", $2)}' | tr -d ' ')
+    echo "$sysSec.$sysUSec"
+}
+
+pingStart=$( sys_uptime )
 response=$(curl -s --url "$PING_URL")
 curlErrCode=$?
-pingNano=$((($(date +%s%N) - "$pingStart")))
-pingTime=$( echo "scale=4; $pingNano/1000000000" | bc -l | sed 's/^\./0./' )
+pingEnd=$( sys_uptime )
+pingTimeRaw=$( awk "BEGIN {print $pingEnd-$pingStart}" )
+pingTime=$( echo "scale=4; $pingTimeRaw/1" | bc -l | sed 's/^\./0./' ) # round to 4 decimals and add ones-place zero if needed
 
 connectionErrCode=0
 if [ $curlErrCode -eq 0 ]; then
@@ -23,7 +33,7 @@ if [ $curlErrCode -eq 0 ]; then
             numErrs=$((numErrs + 1));
         fi;
     else
-        ping -c 1 -q -w 1 "$RELIABLE_REFERENCE_PING_HOST" &> /dev/null
+        ping -c 1 -q -w 1 "$RELIABLE_REFERENCE_PING_HOST" > /dev/null 2>&1
         connectionErrCode=$?
         if [ $connectionErrCode -eq 0 ]; then
             # tgt connection error
@@ -43,7 +53,7 @@ if [ $numErrs -ge "$THRESHOLD_FAILS_FOR_EMAIL" ] && [ $connectionErrCode -eq 0 ]
 
             Ping has failed on: $PING_URL
             Failed Times: $numErrs
-            $([ "$numErrs" == "$THRESHOLD_FAILS_FOR_EMAIL" ] && echo "(Threshold to send email: $THRESHOLD_FAILS_FOR_EMAIL fails)" || echo "")
+            $([ "$numErrs" = "$THRESHOLD_FAILS_FOR_EMAIL" ] && echo "(Threshold to send email: $THRESHOLD_FAILS_FOR_EMAIL fails)" || echo "")
             "
         echo "$emailText" | awk '{$1=$1;print}' | /usr/sbin/sendmail -t
     fi
@@ -62,18 +72,18 @@ if [ $numErrs -eq 0 ] && [ $lastNumErrs -ge "$THRESHOLD_FAILS_FOR_EMAIL" ];
     fi;
 
 # LOGGING
-pingLogFile="/var/log/pinger/${ENDPOINT_NAME// /_}.ping.curr.log"
-pingPriorLogFile="/var/log/pinger/${ENDPOINT_NAME// /_}.ping.prior.log"
+pingLogFile=$( echo "/var/log/pinger/${ENDPOINT_NAME}.ping.curr.log" | tr "[:blank:]" _ )
+pingPriorLogFile=$( echo "/var/log/pinger/${ENDPOINT_NAME}.ping.prior.log" | tr "[:blank:]" _ )
 firstFileTimestamp=$([ -f "$pingLogFile" ] && head -n1 "$pingLogFile" | sed 's/,.*//' || echo 0)
 # STATUS REPORT EMAIL
-if [ "$firstFileTimestamp" -ne 0 ] && [ "$firstFileTimestamp" -le $(("$timestamp"-${STATUS_EMAIL_DAYS:=30}*86400)) ];  # 86400=one day in seconds
+if [ "$firstFileTimestamp" -ne 0 ] && [ "$firstFileTimestamp" -le $((timestamp-${STATUS_EMAIL_DAYS:=30}*86400)) ];  # 86400=one day in seconds
     then 
         #Time Period
         startDate=$(date -d "@$firstFileTimestamp" +%D)
         endDate=$(date -d "@$timestamp" +%D)
         #Percent Up
-        numFails=$( awk --field-separator=, 'BEGIN {count=0} { if ($2 == 0) { count++ } } END {print count}' < "$pingLogFile" )
-        numConnErr=$( awk --field-separator=, 'BEGIN {count=0} { if ($2 == 2) { count++ } } END {print count}' < "$pingLogFile" )
+        numFails=$( awk -F , 'BEGIN {count=0} { if ($2 == 0) { count++ } } END {print count}' < "$pingLogFile" )
+        numConnErr=$( awk -F , 'BEGIN {count=0} { if ($2 == 2) { count++ } } END {print count}' < "$pingLogFile" )
         ttlPings=$( wc -l < "$pingLogFile" )
         failMin=$(( numFails*INTERVAL_MIN ))
         failSecs=$(( failMin*60 ))
@@ -83,16 +93,16 @@ if [ "$firstFileTimestamp" -ne 0 ] && [ "$firstFileTimestamp" -le $(("$timestamp
         else    
             percentUp=$( echo "scale=4; 100-100*$failSecs/$totalSecs" | bc -l )
         fi;
-        avgPingTime=$( <"$pingLogFile" awk --field-separator=, 'BEGIN {total=0; count=0;} { if ($2 == 1) { total += $3; count++;} } END { print (count == 0) ? "-" : total/count }' )
-        medianPingTime=$( <"$pingLogFile" sort -n -t, -k3 | awk --field-separator=, 'BEGIN {i=0;} { if ($2 == 1) { a[i++]=$3;} } END { print (i == 0) ? "-" : a[int(i/2)]; }' )
+        avgPingTime=$( <"$pingLogFile" awk -F , 'BEGIN {total=0; count=0;} { if ($2 == 1) { total += $3; count++;} } END { if (count == 0) {print "-"} else {printf "%.2f",total/count} }' )
+        medianPingTime=$( <"$pingLogFile" sort -n -t, -k3 | awk -F , 'BEGIN {i=0;} { if ($2 == 1) { a[i++]=$3;} } END { if (i == 0) {print "-"} else {printf "%.2f",a[int(i/2)]} }' )
         #Outages
-        failureList=$( <"$pingLogFile" awk --field-separator=, '{if ($2 == 0) {print "- Outage on " strftime("%Y-%m-%d at %H:%M:%S", $1) } }' )
+        failureList=$( <"$pingLogFile" awk -F , '{if ($2 == 0) {print "- Outage on " strftime("%Y-%m-%d at %H:%M:%S", $1) } }' )
 
-        statusLogFile="/var/log/pinger/${ENDPOINT_NAME// /_}.summary.history.log"
-        statusReportHistory=$(tail -n50 "$statusLogFile" | tac | awk --field-separator=, '{print "- " $1 " ~ " $2 ", " $3 "%, " (($4 == "-") ? "---" : $4 "s"), " (($5 == "-") ? "---" : $5 "s")}')
-        echo "$startDate,$endDate,${percentUp},${medianPingTime},${avgPingTime}" >> "$statusLogFile"
+        statusLogFile=$( echo "/var/log/pinger/${ENDPOINT_NAME}.summary.history.log" | tr "[:blank:]" _ )
+        statusReportHistory=$(tail -n50 "$statusLogFile" | tac | awk -F , '{print "- " $1 " ~ " $2 ", " $3 "%, " (($4 == "-") ? "---" : $4 "s") ", " (($5 == "-") ? "---" : ($5 == "") ? "n/a" : $5 "s")}')
+        echo "$startDate,$endDate,${percentUp},${avgPingTime},${medianPingTime}" >> "$statusLogFile"
 
-        echo "$(date +"%Y-%m-%d %R"): Sending status email - $startDate to $endDate: Uptime ${percentUp}%, Median Ping Time $( [ "$medianPingTime" == '-' ] && echo '---' || echo "$medianPingTime"sec ), Avg Ping Time $( [ "$avgPingTime" == '-' ] && echo '---' || echo "$avgPingTime"sec )" >> /proc/1/fd/1
+        echo "$(date +"%Y-%m-%d %R"): Sending status email - $startDate to $endDate: Uptime ${percentUp}%, Median Ping Time $( [ "$medianPingTime" = '-' ] && echo '---' || echo "$medianPingTime"sec ), Avg Ping Time $( [ "$avgPingTime" = '-' ] && echo '---' || echo "$avgPingTime"sec )" >> /proc/1/fd/1
         emailText="To: $TO_EMAIL_ADDR
             Subject: STATUS REPORT - $ENDPOINT_NAME
             From: $RELAY_SENDER_INFORMAL_NAME <$RELAY_SENDER_EMAIL_ADDRESS>
@@ -103,19 +113,19 @@ if [ "$firstFileTimestamp" -ne 0 ] && [ "$firstFileTimestamp" -le $(("$timestamp
 
             Time Period: $startDate to $endDate
 
-            Failed Pings: $numFails $([ "$failMin" == 0 ] && echo "" || echo " (down approx ${failMin} minutes)")
+            Failed Pings: $numFails $([ "$failMin" -eq 0 ] && echo "" || echo " (down approx ${failMin} minutes)")
             Outgoing Connection Problems: $numConnErr
             - Pinging every $INTERVAL_MIN min
             - Total Pings: $ttlPings
             Uptime Percent: ${percentUp}% 
-            Median Ping Time: $([ "$medianPingTime" == "-" ] && echo "---" || echo "${medianPingTime}s")
-            Avg Ping Time: $([ "$avgPingTime" == "-" ] && echo "---" || echo "${avgPingTime}s")
+            Median Ping Time: $([ "$medianPingTime" = "-" ] && echo "---" || echo "${medianPingTime}s")
+            Avg Ping Time: $([ "$avgPingTime" = "-" ] && echo "---" || echo "${avgPingTime}s")
 
             Ping Failures:
-            $([ "$failureList" == "" ] && echo "  (None)" || echo "${failureList}")
+            $([ "$failureList" = "" ] && echo "  (None)" || echo "${failureList}")
 
             Recent History:
-            > Time Period, Pct Up, Median Ping Time, Avg Ping Time
+            > Time Period, Pct Up, Avg Ping Time, Median Ping Time
             ${statusReportHistory}
             "
         echo "$emailText" | awk '{$1=$1;print}' | /usr/sbin/sendmail -t

@@ -1,7 +1,8 @@
-FROM centos:8
+FROM alpine:3
 LABEL maintainer="Marc Lefkon"
 
-RUN dnf -y install rsyslog postfix cronie cyrus-sasl cyrus-sasl-plain bc
+RUN apk add postfix cyrus-sasl cyrus-sasl-plain bc curl
+        #syslogd, cron already installed in base.
 
 COPY pinger.sh \
      entrypoint.sh \
