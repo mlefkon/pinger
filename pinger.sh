@@ -113,8 +113,8 @@ if [ "$firstFileTimestamp" -ne 0 ] && [ "$firstFileTimestamp" -le $((timestamp-$
 
             Time Period: $startDate to $endDate
 
-            Failed Pings: $numFails $([ "$failMin" -eq 0 ] && echo "" || echo " (down approx ${failMin} minutes)")
-            Outgoing Connection Problems: $numConnErr
+            Failed Pings (at target): $numFails $([ "$failMin" -eq 0 ] && echo "" || echo " (down approx ${failMin} minutes)")
+            Connection Problems (at source): $numConnErr
             - Pinging every $INTERVAL_MIN min
             - Total Pings: $ttlPings
             Uptime Percent: ${percentUp}% 
