@@ -27,20 +27,20 @@ pingTime=$( echo "scale=4; $pingTimeRaw/1" | bc -l | sed 's/^\./0./' ) # round t
 connectionErrCode=0
 if [ $curlErrCode -eq 0 ]; then
         if [ "$response" = "$EXPECTED_RESPONSE" ] ; then
-            numErrs=0; 
+            numErrs=0;
         else
-            # tgt response error
+            echo "tgt response error"
             numErrs=$((numErrs + 1));
         fi;
     else
         ping -c 1 -q -w 1 "$RELIABLE_REFERENCE_PING_HOST" > /dev/null 2>&1
         connectionErrCode=$?
         if [ $connectionErrCode -eq 0 ]; then
-            # tgt connection error
+            echo "tgt connection error"
             numErrs=$((numErrs + 1));
-        #else
-        #    src connection err
-        #    so do nothing. $numErrs remains unchanged because is src problem. tgt status is unknown.
+        else
+            echo "src connection err"
+            # so do nothing. $numErrs remains unchanged because is src problem. tgt status is unknown.
         fi;
     fi;
 

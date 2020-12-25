@@ -81,7 +81,7 @@ cronjob="ENDPOINT_NAME=\"${ENDPOINT_NAME:=Pinger}\"
     set +f
 
 echo "Start Services..."
-    syslogd -O /var/log/pinger -s 200 -b 1
+    syslogd -O /var/log/messages -l 6 -s 200 -b 1 # -Output to /var/log/messages, -log lvl 6 or more severe, max file -size 200kb, -b keep 1 rotated log
     /usr/sbin/postfix start
 
 echo "Sending init/test email..."
@@ -109,5 +109,4 @@ echo "Sending init/test email..."
     grep -E "to=.* relay=.* status=" < /var/log/maillog | grep -v root | tail -n1
 
 echo "Starting cron, awaiting ping jobs..."
-    crond -f
-#sleep infinity
+    crond -f   # keep process if -(f)oreground
