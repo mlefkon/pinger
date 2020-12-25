@@ -26,8 +26,8 @@ echo "Configuring Postfix..."
     postconf -e "smtp_sasl_security_options = noanonymous"
     postconf -e "smtp_sasl_type = cyrus"
     postconf -e "smtp_tls_CAfile = /etc/ssl/certs/ca-certificates.crt"
-
     postconf -e "smtp_tls_security_level=encrypt"
+    postconf -e "maillog_file=/var/log/maillog"
 
     # sender_canonical
     postconf -e "sender_canonical_maps = regexp:/etc/postfix/sender_canonical" 
@@ -80,9 +80,8 @@ cronjob="ENDPOINT_NAME=\"${ENDPOINT_NAME:=Pinger}\"
     echo "Crontab has been set."
     set +f
 
-echo "Normal Startup..."
+echo "Start Services..."
     syslogd -O /var/log/pinger -s 200 -b 1
-    crond
     /usr/sbin/postfix start
 
 echo "Sending init/test email..."
@@ -109,4 +108,6 @@ echo "Sending init/test email..."
     echo "  If email not received, examine Postfix mail logs: /var/log/maillog"
     grep -E "to=.* relay=.* status=" < /var/log/maillog | grep -v root | tail -n1
 
-sleep infinity
+echo "Starting cron, awaiting ping jobs..."
+    crond -f
+#sleep infinity
