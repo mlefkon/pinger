@@ -1,4 +1,4 @@
-FROM alpine:3
+FROM alpine:3.12
 LABEL maintainer="Marc Lefkon"
 
 RUN apk add postfix cyrus-sasl cyrus-sasl-plain bc curl
