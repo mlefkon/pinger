@@ -11,10 +11,16 @@ lastNumErrs=$numErrs;
 
 #busybox `date` fn does not support nanoseconds (+%s%N), so use sys-time  
 #    https://unix.stackexchange.com/questions/167968/date-in-milliseconds-on-openwrt-on-arduino-yun
+#  /proc/uptime gives 1/100 sec accuracy. Is good enough.
+#  Can also use: 
+#    nmeter: 
+#      nmeter -d-1 '%5t' | head -n1
+#    adjtimex: (but requires docker privileged mode)
+#      sysSec=$(adjtimex | grep time.tv_sec | awk -F : '{print $2}' | tr -d ' ')
+#      sysUSec=$(adjtimex | grep time.tv_usec | awk -F : '{printf("%06d\n", $2)}' | tr -d ' ')
+#      echo "$sysSec.$sysUSec"
 sys_uptime() {
-    sysSec=$(adjtimex | grep time.tv_sec | awk -F : '{print $2}' | tr -d ' ')
-    sysUSec=$(adjtimex | grep time.tv_usec | awk -F : '{printf("%06d\n", $2)}' | tr -d ' ')
-    echo "$sysSec.$sysUSec"
+    < /proc/uptime awk -F ' ' '{print $1}' | tr -d ' '
 }
 
 pingStart=$( sys_uptime )
@@ -29,17 +35,17 @@ if [ $curlErrCode -eq 0 ]; then
         if [ "$response" = "$EXPECTED_RESPONSE" ] ; then
             numErrs=0;
         else
-            echo "tgt response error"
+            echo "Target response error."
             numErrs=$((numErrs + 1));
         fi;
     else
         ping -c 1 -q -w 1 "$RELIABLE_REFERENCE_PING_HOST" > /dev/null 2>&1
         connectionErrCode=$?
         if [ $connectionErrCode -eq 0 ]; then
-            echo "tgt connection error"
+            echo "Target connection error."
             numErrs=$((numErrs + 1));
         else
-            echo "src connection err"
+            echo "Source connection err."
             # so do nothing. $numErrs remains unchanged because is src problem. tgt status is unknown.
         fi;
     fi;

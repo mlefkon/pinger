@@ -109,4 +109,4 @@ echo "Sending init/test email..."
     grep -E "to=.* relay=.* status=" < /var/log/maillog | grep -v root | tail -n1
 
 echo "Starting cron, awaiting ping jobs..."
-    crond -f   # keep process if -(f)oreground
+    crond -f   # keep process in -(f)oreground
