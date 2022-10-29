@@ -24,7 +24,11 @@ sys_uptime() {
 }
 
 pingStart=$( sys_uptime )
-response=$(curl -s --url "$PING_URL")
+if [ $ALLOW_INSECURE -eq 0 ]; then
+        response=$(curl -s --url "$PING_URL")
+    else
+        response=$(curl --insecure -s --url "$PING_URL")
+    fi;
 curlErrCode=$?
 pingEnd=$( sys_uptime )
 pingTimeRaw=$( awk "BEGIN {print $pingEnd-$pingStart}" )
@@ -32,20 +36,21 @@ pingTime=$( echo "scale=4; $pingTimeRaw/1" | bc -l | sed 's/^\./0./' ) # round t
 
 connectionErrCode=0
 if [ $curlErrCode -eq 0 ]; then
-        if [ "$response" = "$EXPECTED_RESPONSE" ] ; then
+        re=".*$EXPECTED_RESPONSE.*"
+        if [[ "$response" =~ $re ]] ; then
             numErrs=0;
         else
-            echo "Target response error."
+            echo "Target response error. (200 response but mismatch text body)"
             numErrs=$((numErrs + 1));
         fi;
     else
         ping -c 1 -q -w 1 "$RELIABLE_REFERENCE_PING_HOST" > /dev/null 2>&1
         connectionErrCode=$?
         if [ $connectionErrCode -eq 0 ]; then
-            echo "Target connection error."
+            echo "Target connection error. (Not 200 response but could contact the reliable reference host)"
             numErrs=$((numErrs + 1));
         else
-            echo "Source connection err."
+            echo "Source connection err. (Not 200 response and could not contact the reliable reference host, so probably problem with source connection)"
             # so do nothing. $numErrs remains unchanged because is src problem. tgt status is unknown.
         fi;
     fi;

@@ -61,6 +61,7 @@ cronjob="ENDPOINT_NAME=\"${ENDPOINT_NAME:=Pinger}\"
          INTERVAL_MIN=\"${INTERVAL_MIN:=5}\"
          THRESHOLD_FAILS_FOR_EMAIL=\"${THRESHOLD_FAILS_FOR_EMAIL:=1}\"
          PING_URL=\"${PING_URL}\"
+         ALLOW_INSECURE=\"${ALLOW_INSECURE:=0}\"
          RELIABLE_REFERENCE_PING_HOST=\"${RELIABLE_REFERENCE_PING_HOST}\"
          EXPECTED_RESPONSE=\"${EXPECTED_RESPONSE}\"
          RELAY_SENDER_EMAIL_ADDRESS=\"${RELAY_SENDER_EMAIL_ADDRESS}\"
@@ -93,7 +94,7 @@ echo "Sending init/test email..."
         (Pinger version built on: $buildDate)
 
         Name: $ENDPOINT_NAME
-        URL: $PING_URL
+        URL: $PING_URL $(if [ $ALLOW_INSECURE -eq 0 ]; then echo ''; else echo '(invalid certs allowed)'; fi;)
         Expected Response: \"$EXPECTED_RESPONSE\"
         Ping every: $INTERVAL_MIN minunte(s)
         Threshold: $THRESHOLD_FAILS_FOR_EMAIL failure(s) will be required to send an email.

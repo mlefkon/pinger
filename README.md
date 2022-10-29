@@ -13,6 +13,7 @@ This was designed to work with Zoho mail's SMTP relay.  It may work with many ot
 - Target Server
   - **ENDPOINT_NAME:**                default: "Pinger", used for email 'subject' & logfile names about this Pinger instance
   - **PING_URL:**                     required, any valid curl URL
+  - **ALLOW_INSECURE:**               default: 0, allow for invalid certificate
   - **EXPECTED_RESPONSE:**            required, expected text body returned from PING_URL
   - **INTERVAL_MIN:**                 default: 5, minutes between pings
   - **RELIABLE_REFERENCE_PING_HOST:** required, for connectivity test in case of PING_URL failure. Must be a ping-responsive host, not a URL.
@@ -61,6 +62,7 @@ Data is saved to `${ENDPOINT_NAME}.{ping|fails|history}.log` files in `/var/log/
     -e INTERVAL_MIN=3 \
     -e THRESHOLD_FAILS_FOR_EMAIL=2 \
     -e PING_URL=https://my.url.com/myscript \
+    -e ALLOW_INSECURE=0 \
     -e RELIABLE_REFERENCE_PING_HOST=google.com \
     -e EXPECTED_RESPONSE="eg: Ping succeeded" \
     -e RELAY_HOST=[mail.relay.com]:587 \
