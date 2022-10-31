@@ -55,9 +55,6 @@ cronjob="ENDPOINT_NAME=\"${ENDPOINT_NAME:=Pinger}\"
     echo "Crontab has been set."
     set +f
 
-echo "Start Services..."
-    syslogd -O /var/log/messages -l 6 -s 200 -b 1 # -Output to /var/log/messages, -log lvl 6 or more severe, max file -size 200kb, -b keep 1 rotated log
-
 echo "Sending init/test email..."
     emailText="To: $TO_EMAIL_ADDR
         Subject: ${initText} - $ENDPOINT_NAME

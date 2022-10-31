@@ -2,7 +2,7 @@ FROM alpine:3.16.2
 LABEL maintainer="Marc Lefkon"
 
 RUN apk add bc curl
-  #syslogd, cron already installed in base.
+  #cron already installed in base.
 
 COPY pinger.sh \
      entrypoint.sh \
