@@ -17,32 +17,6 @@ echo "Checking required Environment Variables..."
     if [ -z "${RELIABLE_REFERENCE_PING_HOST##*/*}"              ]; then fatal=1; echo "Env var RELIABLE_REFERENCE_PING_HOST is a host, not a URL.";         fi;
     if [ $fatal -eq 1 ]; then echo "FATAL ERROR: missing/bad environment variables need to be corrected."; exit; fi;
 
-echo "Configuring Postfix..."
-    # /etc/postfix/main.cf
-    postconf -e "relayhost = ${RELAY_HOST}"
-    postconf -e "inet_protocols = ipv4"
-    postconf -e "smtp_use_tls = yes"
-    postconf -e "smtp_sasl_auth_enable = yes"
-    postconf -e "smtp_sasl_security_options = noanonymous"
-    postconf -e "smtp_sasl_type = cyrus"
-    postconf -e "smtp_tls_CAfile = /etc/ssl/certs/ca-certificates.crt"
-    postconf -e "smtp_tls_security_level=encrypt"
-    postconf -e "maillog_file=/var/log/maillog"
-
-    # sender_canonical
-    postconf -e "sender_canonical_maps = regexp:/etc/postfix/sender_canonical" 
-    echo "/.+/ ${RELAY_SENDER_EMAIL_ADDRESS}" > /etc/postfix/sender_canonical; 
-    # smtp_header_checks
-    postconf -e "smtp_header_checks = regexp:/etc/postfix/smtp_header_checks"
-    echo "/From:.*/ REPLACE From: ${RELAY_SENDER_INFORMAL_NAME} <${RELAY_SENDER_EMAIL_ADDRESS}>" > /etc/postfix/smtp_header_checks; 
-    # sasl_passwd
-    postconf -e "smtp_sasl_password_maps = hash:/etc/postfix/sasl_passwd" 
-    echo "${RELAY_HOST} ${RELAY_USERNAME}:${RELAY_PASSWORD}" \
-                  > /etc/postfix/sasl_passwd; 
-    postmap         /etc/postfix/sasl_passwd;                              
-    chown root:root /etc/postfix/sasl_passwd /etc/postfix/sasl_passwd.db; 
-    chmod 0600      /etc/postfix/sasl_passwd /etc/postfix/sasl_passwd.db; 
-
 echo "Checking logs..."
     pingLogFile=$( echo "/var/log/pinger/${ENDPOINT_NAME}.ping.curr.log" | tr "[:blank:]" _ )
     firstStatusTS=$([ -f "$pingLogFile" ] && head -n1 "$pingLogFile" | sed 's/,.*//' || echo 0);
@@ -83,7 +57,6 @@ cronjob="ENDPOINT_NAME=\"${ENDPOINT_NAME:=Pinger}\"
 
 echo "Start Services..."
     syslogd -O /var/log/messages -l 6 -s 200 -b 1 # -Output to /var/log/messages, -log lvl 6 or more severe, max file -size 200kb, -b keep 1 rotated log
-    /usr/sbin/postfix start
 
 echo "Sending init/test email..."
     emailText="To: $TO_EMAIL_ADDR
@@ -103,11 +76,8 @@ echo "Sending init/test email..."
         History: $logfiletext
         - Note: mount /var/log/pinger/ as a docker volume to preserve history between reboots.
         "
-    echo "$emailText" | awk '{$1=$1;print}' | /usr/sbin/sendmail -t
-
-    sleep 30
-    echo "  If email not received, examine Postfix mail logs: /var/log/maillog"
-    grep -E "to=.* relay=.* status=" < /var/log/maillog | grep -v root | tail -n1
+    echo -e "$emailText" | awk '{$1=$1;print}' | curl -s -T "-" --ssl-reqd --url "$RELAY_HOST" --mail-from "$RELAY_SENDER_EMAIL_ADDRESS" --mail-rcpt "$TO_EMAIL_ADDR" --user "${RELAY_USERNAME}:${RELAY_PASSWORD}"
+	echo "  sent."
 
 echo "Starting cron, awaiting ping jobs..."
     crond -f   # keep process in -(f)oreground

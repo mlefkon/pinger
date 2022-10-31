@@ -22,12 +22,12 @@ lastNumErrs=$numErrs;
 sys_uptime() {
     < /proc/uptime awk -F ' ' '{print $1}' | tr -d ' '
 }
-
 pingStart=$( sys_uptime )
 if [ $ALLOW_INSECURE -eq 0 ]; then
         response=$(curl -s --url "$PING_URL")
     else
-        response=$(curl --insecure -s --url "$PING_URL")
+        response=$(curl -s --insecure --url "$PING_URL")
+          # -H 'upgrade-insecure-requests: 1'
     fi;
 curlErrCode=$?
 pingEnd=$( sys_uptime )
@@ -36,21 +36,24 @@ pingTime=$( echo "scale=4; $pingTimeRaw/1" | bc -l | sed 's/^\./0./' ) # round t
 
 connectionErrCode=0
 if [ $curlErrCode -eq 0 ]; then
-        re=".*$EXPECTED_RESPONSE.*"
-        if [[ "$response" =~ $re ]] ; then
+        if [[ "$response" =~ "$EXPECTED_RESPONSE" ]] ; then
             numErrs=0;
+            #echo "$(date +'%Y.%m.%d-%X'): ping OK"
         else
-            echo "Target response error. (200 response but mismatch text body)"
+            echo "$(date +'%Y.%m.%d-%X'): Target response text error. (no error from 'curl' but mismatched EXPECTED_RESPONSE)"
+            echo "  Expecting: ${EXPECTED_RESPONSE}"
+            echo "  Response: ${response:0:500}"
             numErrs=$((numErrs + 1));
         fi;
     else
         ping -c 1 -q -w 1 "$RELIABLE_REFERENCE_PING_HOST" > /dev/null 2>&1
         connectionErrCode=$?
         if [ $connectionErrCode -eq 0 ]; then
-            echo "Target connection error. (Not 200 response but could contact the reliable reference host)"
+            echo "$(date +'%Y.%m.%d-%X'): Target connection error (curl err: $curlErrCode). ('curl' had error but could still ping the RELIABLE_REFERENCE_PING_HOST)"
+            echo "  Response: ${response:0:500}"
             numErrs=$((numErrs + 1));
         else
-            echo "Source connection err. (Not 200 response and could not contact the reliable reference host, so probably problem with source connection)"
+            echo "$(date +'%Y.%m.%d-%X'): Source connection error. ('curl' had error on target, but could not ping the RELIABLE_REFERENCE_PING_HOST, so probably problem with source connection)"
             # so do nothing. $numErrs remains unchanged because is src problem. tgt status is unknown.
         fi;
     fi;
@@ -66,7 +69,8 @@ if [ $numErrs -ge "$THRESHOLD_FAILS_FOR_EMAIL" ] && [ $connectionErrCode -eq 0 ]
             Failed Times: $numErrs
             $([ "$numErrs" = "$THRESHOLD_FAILS_FOR_EMAIL" ] && echo "(Threshold to send email: $THRESHOLD_FAILS_FOR_EMAIL fails)" || echo "")
             "
-        echo "$emailText" | awk '{$1=$1;print}' | /usr/sbin/sendmail -t
+        echo -e "$emailText" | awk '{$1=$1;print}' | curl -s --ssl-reqd -T "-" --url "$RELAY_HOST" --mail-from "$RELAY_SENDER_EMAIL_ADDRESS" --mail-rcpt "$TO_EMAIL_ADDR" --user "${RELAY_USERNAME}:${RELAY_PASSWORD}"
+        echo "  sent."
     fi
 
 if [ $numErrs -eq 0 ] && [ $lastNumErrs -ge "$THRESHOLD_FAILS_FOR_EMAIL" ]; 
@@ -79,7 +83,8 @@ if [ $numErrs -eq 0 ] && [ $lastNumErrs -ge "$THRESHOLD_FAILS_FOR_EMAIL" ];
             Ping is now OK on: $PING_URL
             (previous # errors: $lastNumErrs)
             "
-        echo "$emailText" | awk '{$1=$1;print}' | /usr/sbin/sendmail -t
+        echo -e "$emailText" | awk '{$1=$1;print}' | curl -s --ssl-reqd -T "-" --url "$RELAY_HOST" --mail-from "$RELAY_SENDER_EMAIL_ADDRESS" --mail-rcpt "$TO_EMAIL_ADDR" --user "${RELAY_USERNAME}:${RELAY_PASSWORD}"
+        echo "  sent."
     fi;
 
 # LOGGING
@@ -89,6 +94,7 @@ firstFileTimestamp=$([ -f "$pingLogFile" ] && head -n1 "$pingLogFile" | sed 's/,
 # STATUS REPORT EMAIL
 if [ "$firstFileTimestamp" -ne 0 ] && [ "$firstFileTimestamp" -le $((timestamp-${STATUS_EMAIL_DAYS:=30}*86400)) ];  # 86400=one day in seconds
     then 
+        echo "Sending Status Report email..."
         #Time Period
         startDate=$(date -d "@$firstFileTimestamp" +%D)
         endDate=$(date -d "@$timestamp" +%D)
@@ -139,7 +145,8 @@ if [ "$firstFileTimestamp" -ne 0 ] && [ "$firstFileTimestamp" -le $((timestamp-$
             > Time Period, Pct Up, Avg Ping Time, Median Ping Time
             ${statusReportHistory}
             "
-        echo "$emailText" | awk '{$1=$1;print}' | /usr/sbin/sendmail -t
+        echo -e "$emailText" | awk '{$1=$1;print}' | curl -s --ssl-reqd -T "-" --url "$RELAY_HOST" --mail-from "$RELAY_SENDER_EMAIL_ADDRESS" --mail-rcpt "$TO_EMAIL_ADDR" --user "${RELAY_USERNAME}:${RELAY_PASSWORD}"
+        echo "  sent."
 
         mv -f "$pingLogFile" "${pingPriorLogFile}"
 fi;
