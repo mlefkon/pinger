@@ -4,9 +4,7 @@ Image repository [Dockerhub: mlefkon/pinger](https://hub.docker.com/r/mlefkon/pi
 
 ## What it does
 
-A docker container cron job runs `curl` to 'http ping' your server/endpoint. An email is sent if any problems occur.
-
-This was designed to work with Zoho mail's SMTP relay.  It may work with many others.
+A docker container cron job runs `curl` to 'http ping' your server/endpoint. An email is sent via SMTP relay if any problems occur.
 
 ## Configuration (Environment Variables)
 
