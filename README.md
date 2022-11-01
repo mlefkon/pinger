@@ -1,10 +1,10 @@
-# Pinger - crontab curl requests & email on failure
+# Pinger - Automated 'ping' to a server & email on failure
 
 Image repository [Dockerhub: mlefkon/pinger](https://hub.docker.com/r/mlefkon/pinger) , Source repository [Github: mlefkon/pinger](https://github.com/mlefkon/pinger)
 
 ## What it does
 
-A docker container cronjob runs `curl` to 'ping' your server/endpoint. An email is sent if there are any problems.
+A docker container cron job runs `curl` to 'http ping' your server/endpoint. An email is sent if any problems occur.
 
 This was designed to work with Zoho mail's SMTP relay.  It may work with many others.
 
@@ -65,7 +65,7 @@ Data is saved to `${ENDPOINT_NAME}.{ping|fails|history}.log` files in `/var/log/
     -e ALLOW_INSECURE=0 \
     -e RELIABLE_REFERENCE_PING_HOST=google.com \
     -e EXPECTED_RESPONSE="eg: Ping succeeded" \
-    -e RELAY_HOST=[mail.relay.com]:587 \
+    -e RELAY_HOST=smtps://smtp.relay.com \
     -e RELAY_USERNAME=user \
     -e RELAY_PASSWORD=pass \
     -e RELAY_SENDER_EMAIL_ADDRESS=useremail@relay.com \
