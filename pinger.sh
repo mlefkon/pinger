@@ -23,12 +23,22 @@ sys_uptime() {
     < /proc/uptime awk -F ' ' '{print $1}' | tr -d ' '
 }
 pingStart=$( sys_uptime )
-if [ $ALLOW_INSECURE -eq 0 ]; then
-        response=$(curl -s --url "$PING_URL")
-    else
-        response=$(curl -s --insecure --url "$PING_URL")
-          # -H 'upgrade-insecure-requests: 1'
-    fi;
+optInsecure=''
+optIpv6=''
+if [ $ALLOW_INSECURE -eq 1 ]; then
+    optInsecure='--insecure'
+fi
+if [ $IPv6 -eq 1 ]; then
+    optIpv6='-g -6'
+fi
+response=$(curl -s $optInsecure $optIpv6 --url "$PING_URL")
+     # -H 'upgrade-insecure-requests: 1'
+
+#if [ $ALLOW_INSECURE -eq 0 ]; then
+#        response=$(curl -s --url "$PING_URL")
+#    else
+#        response=$(curl -s --insecure --url "$PING_URL")
+#    fi;
 curlErrCode=$?
 pingEnd=$( sys_uptime )
 pingTimeRaw=$( awk "BEGIN {print $pingEnd-$pingStart}" )

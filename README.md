@@ -12,6 +12,7 @@ A docker container cron job runs `curl` to 'http ping' your server/endpoint. An 
   - **ENDPOINT_NAME:**                default: "Pinger", used for email 'subject' & logfile names about this Pinger instance
   - **PING_URL:**                     required, any valid curl URL
   - **ALLOW_INSECURE:**               default: 0, allow for invalid certificate (set to '1')
+  - **IPv6:**                         default: 0, url is in IPv6 format (set to '1')
   - **EXPECTED_RESPONSE:**            required, expected to be found within text body returned from PING_URL
   - **INTERVAL_MIN:**                 default: 5, minutes between pings
   - **RELIABLE_REFERENCE_PING_HOST:** required, for connectivity test in case of PING_URL failure. Must be a ping-responsive host, not a URL.
