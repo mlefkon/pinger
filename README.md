@@ -62,6 +62,7 @@ Data is saved to `${ENDPOINT_NAME}.{ping|fails|history}.log` files in `/var/log/
     -e THRESHOLD_FAILS_FOR_EMAIL=2 \
     -e PING_URL=https://my.url.com/myscript \
     -e ALLOW_INSECURE=0 \
+    -e IPv6=0 \
     -e RELIABLE_REFERENCE_PING_HOST=google.com \
     -e EXPECTED_RESPONSE="eg: Ping succeeded" \
     -e RELAY_HOST=smtps://smtp.relay.com \
