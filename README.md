@@ -4,18 +4,18 @@ Image repository [Dockerhub: mlefkon/pinger](https://hub.docker.com/r/mlefkon/pi
 
 ## What it does
 
-A docker container cron job runs `curl` to 'http ping' your server/endpoint. An email is sent via SMTP relay if any problems occur.
+A docker container cron job runs `curl` to 'ping' your server/endpoint. An email is sent via SMTP relay if any problems occur.
 
 ## Configuration (Environment Variables)
 
 - Target Server
   - **ENDPOINT_NAME:**                default: "Pinger", used for email 'subject' & logfile names about this Pinger instance
-  - **PING_URL:**                     required, any valid curl URL
+  - **PING_URL:**                     required, any valid curl URL. Include 'https://' if needed as curl defaults to http.
   - **ALLOW_INSECURE:**               default: 0, allow for invalid certificate (set to '1')
   - **IPv6:**                         default: 0, url is in IPv6 format (set to '1')
   - **EXPECTED_RESPONSE:**            required, expected to be found within text body returned from PING_URL
   - **INTERVAL_MIN:**                 default: 5, minutes between pings
-  - **RELIABLE_REFERENCE_PING_HOST:** required, for connectivity test in case of PING_URL failure. Must be a ping-responsive host, not a URL.
+  - **RELIABLE_REFERENCE_PING_HOST:** required, for connectivity test in case of PING_URL failure. Must be a ping-responsive host, not a URL. `ping` is used, not `curl`, so only domain name is needed here.
 - Mail Relay
   - **RELAY_HOST:**                   required, format (incl sq brackets): [relay.host.tld]:port
   - **RELAY_USERNAME:**               required, user's login to relay mail host
@@ -73,4 +73,14 @@ Data is saved to `${ENDPOINT_NAME}.{ping|fails|history}.log` files in `/var/log/
     -e TO_EMAIL_ADDR=recipient@email.com \
     -e STATUS_EMAIL_DAYS=7 \
     mlefkon/pinger 
+```
+
+## IPv6
+
+The container should probably be run on the 'host' network, assuming the host can operate with IPv6 that the 'ping' is to outside the network.  Otherwise a docker 'bridge' network will need to be used with IPv6 enabled, adding an extra layer of complexity.
+
+Note that IPv6 addresses used with `curl` should be enclosed in [square brackets] like: 
+
+```bash
+https://[::1]
 ```
