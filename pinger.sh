@@ -31,7 +31,7 @@ fi
 if [ $IPv6 -eq 1 ]; then
     optIpv6='-g -6'
 fi
-response=$(curl -s $optInsecure $optIpv6 --url "$PING_URL")
+response=$(curl --silent --show-error $optInsecure $optIpv6 --url "$PING_URL")
      # -H 'upgrade-insecure-requests: 1'
 
 #if [ $ALLOW_INSECURE -eq 0 ]; then
@@ -60,6 +60,7 @@ if [ $curlErrCode -eq 0 ]; then
         connectionErrCode=$?
         if [ $connectionErrCode -eq 0 ]; then
             echo "$(date +'%Y.%m.%d-%X'): Target connection error (curl err: $curlErrCode). ('curl' had error but could still ping the RELIABLE_REFERENCE_PING_HOST)"
+            echo "For error meaning, see: https://curl.se/libcurl/c/libcurl-errors.html"
             echo "  Response: ${response:0:500}"
             numErrs=$((numErrs + 1));
         else
@@ -76,6 +77,7 @@ if [ $numErrs -ge "$THRESHOLD_FAILS_FOR_EMAIL" ] && [ $connectionErrCode -eq 0 ]
             From: $RELAY_SENDER_INFORMAL_NAME <$RELAY_SENDER_EMAIL_ADDRESS>
 
             Ping has failed on: $PING_URL
+            Last CURL error code: $curlErrCode  (for meaning, see: https://curl.se/libcurl/c/libcurl-errors.html )
             Failed Times: $numErrs
             $([ "$numErrs" = "$THRESHOLD_FAILS_FOR_EMAIL" ] && echo "(Threshold to send email: $THRESHOLD_FAILS_FOR_EMAIL fails)" || echo "")
             "
