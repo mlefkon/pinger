@@ -24,14 +24,22 @@ sys_uptime() {
 }
 pingStart=$( sys_uptime )
 optInsecure=''
-optIpv6=''
 if [ $ALLOW_INSECURE -eq 1 ]; then
     optInsecure='--insecure'
 fi
+optIpv6=''
 if [ $IPv6 -eq 1 ]; then
     optIpv6='-g -6'
 fi
-response=$(curl --silent --show-error $optInsecure $optIpv6 --url "$PING_URL")
+resolvedPingUrl=
+if echo "$PING_URL" | grep -qi "^file:"; then
+    resolvedPingUrl=$(cat "${PING_URL#?????}")
+elif echo "$PING_URL" | grep -qi "^url:"; then
+    resolvedPingUrl=$(curl --insecure --url "${PING_URL#????}")
+else
+    resolvedPingUrl="$PING_URL"
+fi
+response=$(curl --silent --show-error $optInsecure $optIpv6 --url "$resolvedPingUrl")
      # -H 'upgrade-insecure-requests: 1'
 
 #if [ $ALLOW_INSECURE -eq 0 ]; then

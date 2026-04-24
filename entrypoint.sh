@@ -17,6 +17,20 @@ echo "Checking required Environment Variables..."
     if [ -z "${RELIABLE_REFERENCE_PING_HOST##*/*}"              ]; then fatal=1; echo "Env var RELIABLE_REFERENCE_PING_HOST is a host, not a URL.";         fi;
     if [ $fatal -eq 1 ]; then echo "FATAL ERROR: missing/bad environment variables need to be corrected."; exit; fi;
 
+echo "PING_URL: $PING_URL"
+resolvedPingUrl=
+if echo "$PING_URL" | grep -qi "^file:"; then
+    resolvedPingUrl=$(cat "${PING_URL#?????}")
+    if [ $? -ne 0 ]; then echo "  ERROR: Cannot resolve this PING_URL"; exit; fi;
+    echo "  resolved PING_URL from file: $resolvedPingUrl"
+elif echo "$PING_URL" | grep -qi "^url:"; then
+    resolvedPingUrl=$(curl --insecure --url "${PING_URL#????}")
+    if [ $? -ne 0 ]; then echo "  ERROR: Cannot resolve this PING_URL"; exit; fi;
+    echo "  resolved PING_URL from url: $resolvedPingUrl"
+else
+    echo "  (direct)"
+fi
+
 echo "Checking logs..."
     pingLogFile=$( echo "/var/log/pinger/${ENDPOINT_NAME}.ping.curr.log" | tr "[:blank:]" _ )
     firstStatusTS=$([ -f "$pingLogFile" ] && head -n1 "$pingLogFile" | sed 's/,.*//' || echo 0);
