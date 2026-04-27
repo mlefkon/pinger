@@ -1,8 +1,9 @@
 #!/bin/sh
 
 buildDate=$(cat /usr/local/pinger.build)
-echo "Image Build Date: $buildDate"
-echo "Instance Endpoint Name: ${ENDPOINT_NAME:=Pinger}"
+echo "======================================================================================="
+echo "== Image Build Date: $buildDate"
+echo "== Instance Endpoint Name: ${ENDPOINT_NAME:=Pinger}"
 
 echo "Checking required Environment Variables..."
     fatal=0
@@ -16,23 +17,33 @@ echo "Checking required Environment Variables..."
     if [ "${RELIABLE_REFERENCE_PING_HOST:-missing}" = "missing" ]; then fatal=1; echo "Env var RELIABLE_REFERENCE_PING_HOST is required (eg. google.com)."; fi;
     if [ -z "${RELIABLE_REFERENCE_PING_HOST##*/*}"              ]; then fatal=1; echo "Env var RELIABLE_REFERENCE_PING_HOST is a host, not a URL.";         fi;
     if [ $fatal -eq 1 ]; then echo "FATAL ERROR: missing/bad environment variables need to be corrected."; exit; fi;
+echo "  All ok."
 
-echo "PING_URL: $PING_URL"
+echo "Configuration:"
+echo "  PING_URL: $PING_URL"
 resolvedPingUrl=
 if echo "$PING_URL" | grep -qi "^file:"; then
     resolvedPingUrl=$(cat "${PING_URL#?????}")
-    if [ $? -ne 0 ]; then echo "  ERROR: Cannot resolve this PING_URL"; exit; fi;
-    echo "  resolved PING_URL from file: $resolvedPingUrl"
+    if [ $? -ne 0 ]; then echo "    ERROR: Cannot resolve this PING_URL.  (Does the file exist?)"; exit; fi;
+    echo "    resolved PING_URL from file: $resolvedPingUrl"
 elif echo "$PING_URL" | grep -qi "^url:"; then
-    resolvedPingUrl=$(curl --insecure --url "${PING_URL#????}")
-    if [ $? -ne 0 ]; then echo "  ERROR: Cannot resolve this PING_URL"; exit; fi;
-    echo "  resolved PING_URL from url: $resolvedPingUrl"
+    resolvedPingUrl=$(curl --silent --insecure --fail --url "${PING_URL#????}")
+    if [ $? -ne 0 ]; then echo "    ERROR: Cannot resolve this PING_URL.  (Does the URL exist?)"; exit; fi;
+    echo "    resolved PING_URL from url: $resolvedPingUrl"
+    echo "$resolvedPingUrl" > "/var/log/pinger/${ENDPOINT_NAME}.resolved.from.url.PING_URL.txt"
 else
-    echo "  (direct)"
+    echo "    (direct)"
 fi
+echo "  ALLOW_INSECURE: ${ALLOW_INSECURE:=0}"
+echo "  IPv6: ${IPv6:=0}"
+echo "  EXPECTED_RESPONSE: $EXPECTED_RESPONSE"
+echo "  INTERVAL_MIN: ${INTERVAL_MIN:=5}"
+echo "  THRESHOLD_FAILS_FOR_EMAIL: ${THRESHOLD_FAILS_FOR_EMAIL:=1}"
+echo "  RELIABLE_REFERENCE_PING_HOST: ${RELIABLE_REFERENCE_PING_HOST}"
+echo "  STATUS_EMAIL_DAYS: ${STATUS_EMAIL_DAYS:=30}"
 
-echo "Checking logs..."
-    pingLogFile=$( echo "/var/log/pinger/${ENDPOINT_NAME}.ping.curr.log" | tr "[:blank:]" _ )
+echo "Examining Log:"
+pingLogFile=$( echo "/var/log/pinger/${ENDPOINT_NAME}.ping.curr.log" | tr "[:blank:]" _ )
     firstStatusTS=$([ -f "$pingLogFile" ] && head -n1 "$pingLogFile" | sed 's/,.*//' || echo 0);
     if [ "$firstStatusTS" -eq 0 ]; 
         then 
@@ -42,11 +53,12 @@ echo "Checking logs..."
             logfiletext="Ping log file already exists, starting on $(date -d "@$firstStatusTS" +%D), with $(wc -l < "$pingLogFile") pings so far."; 
             initText="RE-INIT (reboot)"
         fi;
+echo "  ${logfiletext}"
 
 echo "Configuring Crontab job..."
 set -f
-cronjob="ENDPOINT_NAME=\"${ENDPOINT_NAME:=Pinger}\"
-         INTERVAL_MIN=\"${INTERVAL_MIN:=5}\"
+cronjob="ENDPOINT_NAME=\"${ENDPOINT_NAME}\"
+         INTERVAL_MIN=\"${INTERVAL_MIN}\"
          THRESHOLD_FAILS_FOR_EMAIL=\"${THRESHOLD_FAILS_FOR_EMAIL:=1}\"
          PING_URL=\"${PING_URL}\"
          IPv6=\"${IPv6:=0}\"
@@ -64,10 +76,10 @@ cronjob="ENDPOINT_NAME=\"${ENDPOINT_NAME:=Pinger}\"
 
     if crontab -u root -r > /dev/null 2>&1
         then
-            echo "Prior Crontab has been removed."
+            echo "  Prior Crontab has been removed."
         fi
     echo "$cronjob" | awk '{$1=$1;print}' | crontab -u root -; 
-    echo "Crontab has been set."
+    echo "  Crontab has been set."
     set +f
 
 echo "Sending init/test email..."

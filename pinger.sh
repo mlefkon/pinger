@@ -35,7 +35,14 @@ resolvedPingUrl=
 if echo "$PING_URL" | grep -qi "^file:"; then
     resolvedPingUrl=$(cat "${PING_URL#?????}")
 elif echo "$PING_URL" | grep -qi "^url:"; then
-    resolvedPingUrl=$(curl --insecure --url "${PING_URL#????}")
+    resolvedPingUrl=$(curl --silent --insecure --fail --url "${PING_URL#????}")
+    resolveErrCode=$?
+    if [ $resolveErrCode -eq 0 ]; then
+        echo "$resolvedPingUrl" > "/var/log/pinger/${ENDPOINT_NAME}.resolved.from.url.PING_URL.txt"
+    else
+        resolvedPingUrl=$( cat "/var/log/pinger/${ENDPOINT_NAME}.resolved.from.url.PING_URL.txt" )
+        echo "Temporary Error: could not access PING_URL (${PING_URL}).  Using prior resolved value: ${resolvedPingUrl}"
+    fi
 else
     resolvedPingUrl="$PING_URL"
 fi
