@@ -43,6 +43,9 @@ elif echo "$PING_URL" | grep -qi "^url:"; then
         resolvedPingUrl=$( cat "/var/log/pinger/${ENDPOINT_NAME}.resolved.from.url.PING_URL.txt" )
         echo "Temporary Error: could not access PING_URL (${PING_URL}).  Using prior resolved value: ${resolvedPingUrl}"
     fi
+	if [ "$PING_URL_DELAY" ]; then 
+		sleep "$PING_URL_DELAY" # put delay between url retrieval and pinging
+	fi
 else
     resolvedPingUrl="$PING_URL"
 fi
@@ -91,7 +94,7 @@ if [ $numErrs -ge "$THRESHOLD_FAILS_FOR_EMAIL" ] && [ $connectionErrCode -eq 0 ]
             Subject: ERR - $ENDPOINT_NAME
             From: $RELAY_SENDER_INFORMAL_NAME <$RELAY_SENDER_EMAIL_ADDRESS>
 
-            Ping has failed on: $PING_URL
+            Ping has failed on: $PING_URL $([ -n "$resolvedPingUrl" ] && echo "(resolved as: ${resolvedPingUrl})")
             Last CURL error code: $curlErrCode  (for meaning, see: https://curl.se/libcurl/c/libcurl-errors.html )
             Failed Times: $numErrs
             $([ "$numErrs" = "$THRESHOLD_FAILS_FOR_EMAIL" ] && echo "(Threshold to send email: $THRESHOLD_FAILS_FOR_EMAIL fails)" || echo "")
@@ -107,7 +110,7 @@ if [ $numErrs -eq 0 ] && [ $lastNumErrs -ge "$THRESHOLD_FAILS_FOR_EMAIL" ];
             Subject: OK - $ENDPOINT_NAME
             From: $RELAY_SENDER_INFORMAL_NAME <$RELAY_SENDER_EMAIL_ADDRESS>
 
-            Ping is now OK on: $PING_URL
+            Ping is now OK on: $PING_URL $([ -n "$resolvedPingUrl" ] && echo "(resolved as: ${resolvedPingUrl})")
             (previous # errors: $lastNumErrs)
             "
         echo -e "$emailText" | awk '{$1=$1;print}' | curl -s --ssl-reqd -T "-" --url "$RELAY_HOST" --mail-from "$RELAY_SENDER_EMAIL_ADDRESS" --mail-rcpt "$TO_EMAIL_ADDR" --user "${RELAY_USERNAME}:${RELAY_PASSWORD}"
