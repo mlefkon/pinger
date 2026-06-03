@@ -22,7 +22,6 @@ lastNumErrs=$numErrs;
 sys_uptime() {
     < /proc/uptime awk -F ' ' '{print $1}' | tr -d ' '
 }
-pingStart=$( sys_uptime )
 optInsecure=''
 if [ $ALLOW_INSECURE -eq 1 ]; then
     optInsecure='--insecure'
@@ -43,20 +42,16 @@ elif echo "$PING_URL" | grep -qi "^url:"; then
         resolvedPingUrl=$( cat "/var/log/pinger/${ENDPOINT_NAME}.resolved.from.url.PING_URL.txt" )
         echo "Temporary Error: could not access PING_URL (${PING_URL}).  Using prior resolved value: ${resolvedPingUrl}"
     fi
-	if [ "$PING_URL_DELAY" ]; then 
-		sleep "$PING_URL_DELAY" # put delay between url retrieval and pinging
-	fi
+    if [ "$PING_URL_DELAY_SECS" ]; then 
+        sleep "$PING_URL_DELAY_SECS" # put delay between url retrieval and pinging
+    fi
 else
     resolvedPingUrl="$PING_URL"
 fi
+pingStart=$( sys_uptime )
 response=$(curl --silent --show-error $optInsecure $optIpv6 --url "$resolvedPingUrl")
      # -H 'upgrade-insecure-requests: 1'
 
-#if [ $ALLOW_INSECURE -eq 0 ]; then
-#        response=$(curl -s --url "$PING_URL")
-#    else
-#        response=$(curl -s --insecure --url "$PING_URL")
-#    fi;
 curlErrCode=$?
 pingEnd=$( sys_uptime )
 pingTimeRaw=$( awk "BEGIN {print $pingEnd-$pingStart}" )

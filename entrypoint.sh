@@ -21,7 +21,7 @@ echo "  All ok."
 
 echo "Configuration:"
 echo "  PING_URL: $PING_URL"
-echo "  PING_URL_DELAY: ${PING_URL_DELAY:=0} (used between resolving 'url:PING_URL' and pinging)"
+echo "  PING_URL_DELAY_SECS: ${PING_URL_DELAY_SECS:=0} (used between resolving 'url:PING_URL' and pinging)"
 resolvedPingUrl=
 if echo "$PING_URL" | grep -qi "^file:"; then
     resolvedPingUrl=$(cat "${PING_URL#?????}")
@@ -62,7 +62,7 @@ cronjob="ENDPOINT_NAME=\"${ENDPOINT_NAME}\"
          INTERVAL_MIN=\"${INTERVAL_MIN}\"
          THRESHOLD_FAILS_FOR_EMAIL=\"${THRESHOLD_FAILS_FOR_EMAIL:=1}\"
          PING_URL=\"${PING_URL}\"
-         PING_URL_DELAY=\"${PING_URL_DELAY:=0}\"
+         PING_URL_DELAY_SECS=\"${PING_URL_DELAY_SECS:=0}\"
          IPv6=\"${IPv6:=0}\"
          ALLOW_INSECURE=\"${ALLOW_INSECURE:=0}\"
          RELIABLE_REFERENCE_PING_HOST=\"${RELIABLE_REFERENCE_PING_HOST}\"
@@ -85,6 +85,7 @@ cronjob="ENDPOINT_NAME=\"${ENDPOINT_NAME}\"
     set +f
 
 echo "Sending init/test email..."
+    PING_URL_NO_CREDENTIALS=$( echo "$PING_URL" | sed 's#://[^@]*@#://#' )
     emailText="To: $TO_EMAIL_ADDR
         Subject: ${initText} - $ENDPOINT_NAME
         From: $RELAY_SENDER_INFORMAL_NAME <$RELAY_SENDER_EMAIL_ADDRESS>
@@ -93,7 +94,7 @@ echo "Sending init/test email..."
         (Pinger version built on: $buildDate)
 
         Name: $ENDPOINT_NAME
-        URL: $PING_URL $([ $ALLOW_INSECURE -ne 0 ] && echo '(invalid certs allowed)') $([ -n "$resolvedPingUrl" ] && echo "(resolved as: ${resolvedPingUrl}, with resolution-ping delay of ${PING_URL_DELAY} seconds)")
+        URL: $PING_URL_NO_CREDENTIALS $([ $ALLOW_INSECURE -ne 0 ] && echo '(invalid certs allowed)') $([ -n "$resolvedPingUrl" ] && echo "(resolved as: ${resolvedPingUrl}, with resolution-ping delay of ${PING_URL_DELAY_SECS} seconds)")
         IPv6: $(if [ $IPv6 -eq 1 ]; then echo 'Yes'; else echo 'No'; fi;)
         Expected Response: \"$EXPECTED_RESPONSE\"
         Ping every: $INTERVAL_MIN minunte(s)
@@ -104,7 +105,7 @@ echo "Sending init/test email..."
         - Note: mount /var/log/pinger/ as a docker volume to preserve history between reboots.
         "
     echo -e "$emailText" | awk '{$1=$1;print}' | curl -s -T "-" --ssl-reqd --url "$RELAY_HOST" --mail-from "$RELAY_SENDER_EMAIL_ADDRESS" --mail-rcpt "$TO_EMAIL_ADDR" --user "${RELAY_USERNAME}:${RELAY_PASSWORD}"
-	echo "  sent."
+    echo "  sent."
 
 echo "Starting cron, awaiting ping jobs..."
     crond -f   # keep process in -(f)oreground
