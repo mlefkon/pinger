@@ -82,6 +82,7 @@ if [ $curlErrCode -eq 0 ]; then
         fi;
     fi;
 
+PING_URL_NO_CREDENTIALS=$( echo "$PING_URL" | sed 's#://[^@]*@#://#' )
 if [ $numErrs -ge "$THRESHOLD_FAILS_FOR_EMAIL" ] && [ $connectionErrCode -eq 0 ];
     then 
         echo "$(date +"%Y-%m-%d %R"): Sending ERR email. Pinger errors: $numErrs" >> /proc/1/fd/1
@@ -89,7 +90,7 @@ if [ $numErrs -ge "$THRESHOLD_FAILS_FOR_EMAIL" ] && [ $connectionErrCode -eq 0 ]
             Subject: ERR - $ENDPOINT_NAME
             From: $RELAY_SENDER_INFORMAL_NAME <$RELAY_SENDER_EMAIL_ADDRESS>
 
-            Ping has failed on: $PING_URL $([ -n "$resolvedPingUrl" ] && echo "(resolved as: ${resolvedPingUrl})")
+            Ping has failed on: $PING_URL_NO_CREDENTIALS $([ -n "$resolvedPingUrl" ] && echo "(resolved as: ${resolvedPingUrl})")
             Last CURL error code: $curlErrCode  (for meaning, see: https://curl.se/libcurl/c/libcurl-errors.html )
             Failed Times: $numErrs
             $([ "$numErrs" = "$THRESHOLD_FAILS_FOR_EMAIL" ] && echo "(Threshold to send email: $THRESHOLD_FAILS_FOR_EMAIL fails)" || echo "")
@@ -105,7 +106,7 @@ if [ $numErrs -eq 0 ] && [ $lastNumErrs -ge "$THRESHOLD_FAILS_FOR_EMAIL" ];
             Subject: OK - $ENDPOINT_NAME
             From: $RELAY_SENDER_INFORMAL_NAME <$RELAY_SENDER_EMAIL_ADDRESS>
 
-            Ping is now OK on: $PING_URL $([ -n "$resolvedPingUrl" ] && echo "(resolved as: ${resolvedPingUrl})")
+            Ping is now OK on: $PING_URL_NO_CREDENTIALS $([ -n "$resolvedPingUrl" ] && echo "(resolved as: ${resolvedPingUrl})")
             (previous # errors: $lastNumErrs)
             "
         echo -e "$emailText" | awk '{$1=$1;print}' | curl -s --ssl-reqd -T "-" --url "$RELAY_HOST" --mail-from "$RELAY_SENDER_EMAIL_ADDRESS" --mail-rcpt "$TO_EMAIL_ADDR" --user "${RELAY_USERNAME}:${RELAY_PASSWORD}"
